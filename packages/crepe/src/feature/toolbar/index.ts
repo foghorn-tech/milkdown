@@ -16,6 +16,8 @@ interface ToolbarConfig {
   linkIcon: Icon
   strikethroughIcon: Icon
   latexIcon: Icon
+  aiIcon: Icon
+  onAIClick: (ctx: Ctx) => void
 }
 
 export type ToolbarFeatureConfig = Partial<ToolbarConfig>

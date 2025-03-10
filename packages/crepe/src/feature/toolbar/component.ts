@@ -32,6 +32,7 @@ import { NodeSelection, TextSelection } from '@milkdown/kit/prose/state'
 import { mathInlineSchema } from '../latex/inline-latex'
 import { FeaturesCtx } from '../../core/slice'
 import { CrepeFeature } from '../..'
+import { sparkleIcon } from '../../icons/sparkle'
 
 export interface ToolbarProps {
   ctx: Ctx
@@ -221,6 +222,16 @@ export const toolbarComponent: Component<ToolbarProps> = ({
       })}
     >
       ${config?.linkIcon?.() ?? linkIcon}
+    </button>
+    <button
+      type="button"
+      class=${clsx('toolbar-item')}
+      onmousedown=${onClick((ctx) => {
+        config?.onAIClick?.(ctx)
+        hide?.()
+      })}
+    >
+      ${config?.aiIcon?.() ?? sparkleIcon}
     </button>
   </host>`
 }

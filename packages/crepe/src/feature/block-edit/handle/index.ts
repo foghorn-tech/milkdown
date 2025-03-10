@@ -47,6 +47,9 @@ export class BlockHandleView implements PluginView {
           ? 'left-start'
           : 'left'
       },
+      shouldShow: (view) => {
+        return view.hasFocus()
+      }
     })
     this.update()
   }

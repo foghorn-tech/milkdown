@@ -25,6 +25,9 @@ export const latexEditComponent: Component<LatexEditComponentProps> = ({
           ${config?.inlineEditConfirm?.()}
         </button>
       </div>
+      <a href="https://latex-tutorial.com/tutorials/amsmath/" target="_blank">
+        Guide: https://latex-tutorial.com/tutorials/amsmath/
+      </a>
     </host>
   `
 }
