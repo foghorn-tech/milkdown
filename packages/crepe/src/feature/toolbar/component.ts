@@ -233,6 +233,8 @@ export const toolbarComponent: Component<ToolbarProps> = ({
     >
       ${config?.aiIcon?.() ?? sparkleIcon}
     </button>
+    ${config?.extraItems && html`<div class="divider"></div>`}
+    ${config?.extraItems?.(() => ctx)}
   </host>`
 }
 
