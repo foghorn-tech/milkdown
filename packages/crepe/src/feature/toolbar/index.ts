@@ -8,6 +8,7 @@ import type { DefineFeature, Icon } from '../shared'
 import { defIfNotExists } from '../../utils'
 import type { ToolbarProps } from './component'
 import { ToolbarElement } from './component'
+import type { html } from 'atomico'
 
 interface ToolbarConfig {
   boldIcon: Icon
@@ -17,7 +18,8 @@ interface ToolbarConfig {
   strikethroughIcon: Icon
   latexIcon: Icon
   aiIcon: Icon
-  onAIClick: (ctx: Ctx) => void
+  onAIClick?: (ctx: Ctx) => void
+  extraItems: (getCtx: () => Ctx | undefined) => ReturnType<typeof html> | string
 }
 
 export type ToolbarFeatureConfig = Partial<ToolbarConfig>

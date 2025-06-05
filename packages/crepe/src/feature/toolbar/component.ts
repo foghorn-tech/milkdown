@@ -223,7 +223,8 @@ export const toolbarComponent: Component<ToolbarProps> = ({
     >
       ${config?.linkIcon?.() ?? linkIcon}
     </button>
-    <button
+    ${config?.onAIClick
+      ? `<button
       type="button"
       class=${clsx('toolbar-item')}
       onmousedown=${onClick((ctx) => {
@@ -232,7 +233,10 @@ export const toolbarComponent: Component<ToolbarProps> = ({
       })}
     >
       ${config?.aiIcon?.() ?? sparkleIcon}
-    </button>
+    </button>`
+      : ''}
+    ${config?.extraItems && html`<div class="divider"></div>`}
+    ${config?.extraItems?.(() => ctx)}
   </host>`
 }
 
