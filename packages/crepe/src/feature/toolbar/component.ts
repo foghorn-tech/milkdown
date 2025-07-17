@@ -224,7 +224,7 @@ export const toolbarComponent: Component<ToolbarProps> = ({
       ${config?.linkIcon?.() ?? linkIcon}
     </button>
     ${config?.onAIClick
-      ? `<button
+      ? html`<button
       type="button"
       class=${clsx('toolbar-item')}
       onmousedown=${onClick((ctx) => {
