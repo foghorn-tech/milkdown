@@ -1,6 +1,8 @@
-import { $remark } from '@milkdown/utils'
 import type { Node } from '@milkdown/transformer'
+
+import { $remark } from '@milkdown/utils'
 import { visit } from 'unist-util-visit'
+
 import { withMeta } from '../__internal__'
 
 /// This plugin is used to add inline line break for remark AST.
@@ -9,7 +11,10 @@ import { withMeta } from '../__internal__'
 export const remarkLineBreak = $remark(
   'remarkLineBreak',
   () => () => (tree: Node) => {
-    const find = /[\t ]*(?:\r?\n|\r)/g
+    // Start a match only at the start of a run of spaces and tabs.
+    // Otherwise the regex retries from each position in a run that has no
+    // line ending after it, which is quadratic in the run length.
+    const find = /(?<![\t ])[\t ]*(?:\r?\n|\r)/g
     visit(
       tree,
       'text',

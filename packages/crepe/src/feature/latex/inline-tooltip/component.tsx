@@ -1,0 +1,76 @@
+import type { EditorView } from '@milkdown/kit/prose/view'
+
+import { Icon } from '@milkdown/kit/component'
+import {
+  defineComponent,
+  type ShallowRef,
+  type VNodeRef,
+  h,
+  Fragment,
+} from 'vue'
+
+import type { LatexConfig } from '..'
+
+import { keepAlive } from '../../../utils/keep-alive'
+
+keepAlive(h, Fragment)
+
+type LatexTooltipProps = {
+  config: Partial<LatexConfig>
+  innerView: ShallowRef<EditorView | null>
+  updateValue: ShallowRef<() => void>
+}
+
+export const LatexTooltip = defineComponent<LatexTooltipProps>({
+  props: {
+    config: {
+      type: Object,
+      required: true,
+    },
+    innerView: {
+      type: Object,
+      required: true,
+    },
+    updateValue: {
+      type: Object,
+      required: true,
+    },
+  },
+  setup(props) {
+    const innerViewRef: VNodeRef = (el) => {
+      if (!el || !(el instanceof HTMLElement)) return
+      while (el.firstChild) {
+        el.removeChild(el.firstChild)
+      }
+      if (props.innerView.value) {
+        el.appendChild(props.innerView.value.dom)
+      }
+    }
+    const onUpdate = (e: Event) => {
+      e.preventDefault()
+      props.updateValue.value()
+    }
+
+    return () => {
+      return (
+        <>
+          <div class="container">
+            {props.innerView.value && <div ref={innerViewRef} />}
+            <button type="button" onPointerdown={onUpdate}>
+              <Icon icon={props.config.inlineEditConfirm} />
+            </button>
+          </div>
+          {props.config.inlineEditHelp && (
+            <a
+              href={props.config.inlineEditHelp.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {props.config.inlineEditHelp.label}
+            </a>
+          )}
+        </>
+      )
+    }
+  },
+})

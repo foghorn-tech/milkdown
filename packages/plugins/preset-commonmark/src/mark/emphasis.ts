@@ -1,4 +1,6 @@
 import { commandsCtx, remarkStringifyOptionsCtx } from '@milkdown/core'
+import { markRule } from '@milkdown/prose'
+import { toggleMark } from '@milkdown/prose/commands'
 import {
   $command,
   $inputRule,
@@ -6,8 +8,7 @@ import {
   $markSchema,
   $useKeymap,
 } from '@milkdown/utils'
-import { toggleMark } from '@milkdown/prose/commands'
-import { markRule } from '@milkdown/prose'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for the emphasis mark.
@@ -23,6 +24,7 @@ export const emphasisSchema = $markSchema('emphasis', (ctx) => ({
   attrs: {
     marker: {
       default: ctx.get(remarkStringifyOptionsCtx).emphasis || '*',
+      validate: 'string',
     },
   },
   parseDOM: [
@@ -89,7 +91,7 @@ withMeta(emphasisStarInputRule, {
 
 /// Input rule for use `_` to create emphasis mark.
 export const emphasisUnderscoreInputRule = $inputRule((ctx) => {
-  return markRule(/(?:^|[^_])_([^_]+)_$/, emphasisSchema.type(ctx), {
+  return markRule(/\b_(?![_\s])(.*?[^_\s])_$/, emphasisSchema.type(ctx), {
     getAttr: () => ({
       marker: '_',
     }),

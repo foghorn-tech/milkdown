@@ -9,6 +9,7 @@ import {
   $nodeSchema,
   $useKeymap,
 } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for bullet list node.
@@ -27,6 +28,7 @@ export const bulletListSchema = $nodeSchema('bullet_list', (ctx) => {
     attrs: {
       spread: {
         default: false,
+        validate: 'boolean',
       },
     },
     parseDOM: [
@@ -36,7 +38,7 @@ export const bulletListSchema = $nodeSchema('bullet_list', (ctx) => {
           if (!(dom instanceof HTMLElement)) throw expectDomTypeError(dom)
 
           return {
-            spread: dom.dataset.spread,
+            spread: dom.dataset.spread === 'true',
           }
         },
       },
@@ -54,7 +56,7 @@ export const bulletListSchema = $nodeSchema('bullet_list', (ctx) => {
     parseMarkdown: {
       match: ({ type, ordered }) => type === 'list' && !ordered,
       runner: (state, node, type) => {
-        const spread = node.spread != null ? `${node.spread}` : 'false'
+        const spread = node.spread ?? false
         state.openNode(type, { spread }).next(node.children).closeNode()
       },
     },
@@ -64,7 +66,7 @@ export const bulletListSchema = $nodeSchema('bullet_list', (ctx) => {
         state
           .openNode('list', undefined, {
             ordered: false,
-            spread: node.attrs.spread === 'true',
+            spread: node.attrs.spread,
           })
           .next(node.content)
           .closeNode()

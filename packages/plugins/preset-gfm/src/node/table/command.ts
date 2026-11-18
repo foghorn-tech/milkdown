@@ -1,4 +1,5 @@
 import { paragraphSchema } from '@milkdown/preset-commonmark'
+import { findParentNodeType } from '@milkdown/prose'
 import { Selection } from '@milkdown/prose/state'
 import {
   CellSelection,
@@ -11,20 +12,20 @@ import {
   isInTable,
   selectedRect,
   setCellAttr,
+  moveTableRow,
+  moveTableColumn,
 } from '@milkdown/prose/tables'
 import { $command } from '@milkdown/utils'
-import { findParentNodeType } from '@milkdown/prose'
+
 import { withMeta } from '../../__internal__'
+import { tableSchema } from './schema'
 import {
   addRowWithAlignment,
   createTable,
-  moveCol,
-  moveRow,
   selectCol,
   selectRow,
   selectTable,
 } from './utils'
-import { tableSchema } from './schema'
 
 /// A command for moving cursor to previous cell.
 export const goToPrevTableCellCommand = $command(
@@ -109,14 +110,11 @@ export const moveRowCommand = $command(
   'MoveRow',
   () =>
     ({ from, to, pos }: { from?: number; to?: number; pos?: number } = {}) =>
-    (state, dispatch) => {
-      const { tr } = state
-      const result = dispatch?.(
-        moveRow({ tr, origin: from ?? 0, target: to ?? 0, pos, select: true })
-      )
-
-      return Boolean(result)
-    }
+      moveTableRow({
+        from: from ?? 0,
+        to: to ?? 0,
+        pos,
+      })
 )
 
 withMeta(moveRowCommand, {
@@ -130,14 +128,11 @@ export const moveColCommand = $command(
   'MoveCol',
   () =>
     ({ from, to, pos }: { from?: number; to?: number; pos?: number } = {}) =>
-    (state, dispatch) => {
-      const { tr } = state
-      const result = dispatch?.(
-        moveCol({ tr, origin: from ?? 0, target: to ?? 0, pos, select: true })
-      )
-
-      return Boolean(result)
-    }
+      moveTableColumn({
+        from: from ?? 0,
+        to: to ?? 0,
+        pos,
+      })
 )
 
 withMeta(moveColCommand, {

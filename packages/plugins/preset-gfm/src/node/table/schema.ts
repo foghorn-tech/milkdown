@@ -1,8 +1,35 @@
+import type { Node, NodeType } from '@milkdown/prose/model'
+import type { MarkdownNode, SerializerState } from '@milkdown/transformer'
+
 import { tableNodes } from '@milkdown/prose/tables'
 import { $nodeSchema } from '@milkdown/utils'
-import type { MarkdownNode } from '@milkdown/transformer'
-import type { NodeType } from '@milkdown/prose/model'
+
 import { withMeta } from '../../__internal__'
+
+/// A cell holds exactly one paragraph. See `cellContent` below. An mdast
+/// tableCell holds phrasing content directly. Serializing the inline
+/// content of the paragraph keeps the paragraph serializer and its
+/// empty-line placeholder out of a table cell. The parse runners mirror
+/// this and wrap the flat cell content in a paragraph.
+///
+/// Like `serializeText` in the paragraph runner, a trailing hardbreak is
+/// dropped: mdast renders it as a trailing space inside a cell, which
+/// the next parse trims, so keeping it makes consecutive saves diverge.
+/// Cells that are not a single paragraph (schema-invalid but loadable
+/// from JSON documents) are serialized as-is instead of losing children.
+function serializeCellContent(state: SerializerState, node: Node) {
+  const paragraph = node.content.firstChild
+  if (node.childCount !== 1 || paragraph?.type.name !== 'paragraph') {
+    state.next(node.content)
+    return
+  }
+  const last = paragraph.lastChild
+  const content =
+    last?.type.name === 'hardbreak'
+      ? paragraph.content.cut(0, paragraph.content.size - last.nodeSize)
+      : paragraph.content
+  state.next(content)
+}
 
 const originalSchema = tableNodes({
   tableGroup: 'block',
@@ -69,7 +96,19 @@ export const tableHeaderRowSchema = $nodeSchema('table_header_row', () => ({
   ...originalSchema.table_row,
   disableDropCursor: true,
   content: '(table_header)*',
-  parseDOM: [{ tag: 'tr[data-is-header]' }],
+  parseDOM: [
+    { tag: 'tr[data-is-header]' },
+    {
+      tag: 'tr',
+      getAttrs: (dom: HTMLElement) => {
+        if (dom instanceof HTMLElement) {
+          const hasHeader = dom.querySelector('th')
+          return hasHeader ? {} : false
+        }
+        return false
+      },
+    },
+  ],
   toDOM() {
     return ['tr', { 'data-is-header': true }, 0]
   },
@@ -90,6 +129,11 @@ export const tableHeaderRowSchema = $nodeSchema('table_header_row', () => ({
   toMarkdown: {
     match: (node) => node.type.name === 'table_header_row',
     runner: (state, node) => {
+      // An empty row needs no table row, and skipping it keeps remark
+      // from crashing.
+      if (node.content.size === 0) {
+        return
+      }
       state.openNode('tableRow', undefined, { isHeader: true })
       state.next(node.content)
       state.closeNode()
@@ -128,6 +172,11 @@ export const tableRowSchema = $nodeSchema('table_row', () => ({
   toMarkdown: {
     match: (node) => node.type.name === 'table_row',
     runner: (state, node) => {
+      // An empty row needs no table row, and skipping it keeps remark
+      // from crashing.
+      if (node.content.size === 0) {
+        return
+      }
       state.openNode('tableRow')
       state.next(node.content)
       state.closeNode()
@@ -164,7 +213,9 @@ export const tableCellSchema = $nodeSchema('table_cell', () => ({
   toMarkdown: {
     match: (node) => node.type.name === 'table_cell',
     runner: (state, node) => {
-      state.openNode('tableCell').next(node.content).closeNode()
+      state.openNode('tableCell')
+      serializeCellContent(state, node)
+      state.closeNode()
     },
   },
 }))
@@ -198,7 +249,7 @@ export const tableHeaderSchema = $nodeSchema('table_header', () => ({
     match: (node) => node.type.name === 'table_header',
     runner: (state, node) => {
       state.openNode('tableCell')
-      state.next(node.content)
+      serializeCellContent(state, node)
       state.closeNode()
     },
   },

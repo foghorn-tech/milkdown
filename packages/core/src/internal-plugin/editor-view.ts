@@ -1,12 +1,11 @@
 import type { Ctx, MilkdownPlugin, TimerType } from '@milkdown/ctx'
+import type { DirectEditorProps } from '@milkdown/prose/view'
+
 import { createSlice, createTimer } from '@milkdown/ctx'
 import { Plugin, PluginKey } from '@milkdown/prose/state'
-import type { DirectEditorProps } from '@milkdown/prose/view'
 import { EditorView } from '@milkdown/prose/view'
 
 import { withMeta } from '../__internal__'
-import { EditorStateReady } from './editor-state'
-import { InitReady } from './init'
 import {
   editorStateCtx,
   editorViewCtx,
@@ -14,6 +13,9 @@ import {
   nodeViewCtx,
   prosePluginsCtx,
 } from './atoms'
+import { EditorStateReady } from './editor-state'
+import { InitReady } from './init'
+import { pasteRulesCtx, PasteRulesReady } from './paste-rule'
 
 type EditorOptions = Omit<DirectEditorProps, 'state'>
 
@@ -22,14 +24,15 @@ type RootType = Node | undefined | null | string
 /// The timer which will be resolved when the editor view plugin is ready.
 export const EditorViewReady = createTimer('EditorViewReady')
 
-/// A slice which stores timers that need to be waited for before starting to run the plugin.
-/// By default, it's `[EditorStateReady]`.
+/// A slice that holds the timers to wait for before the plugin
+/// runs. It defaults to `[EditorStateReady]`.
 export const editorViewTimerCtx = createSlice(
   [] as TimerType[],
   'editorViewTimer'
 )
 
-/// A slice which contains the editor view options which will be passed to the editor view.
+/// A slice which contains the editor view options which will be passed to the
+/// editor view.
 export const editorViewOptionsCtx = createSlice(
   {} as Partial<EditorOptions>,
   'editorViewOptions'
@@ -74,7 +77,7 @@ const key = new PluginKey('MILKDOWN_VIEW_CLEAR')
 /// The editor view plugin.
 /// This plugin will create an editor view.
 ///
-/// This plugin will wait for the editor state plugin.
+/// This plugin waits for the editor state plugin.
 export const editorView: MilkdownPlugin = (ctx) => {
   ctx
     .inject(rootCtx, document.body)
@@ -82,7 +85,7 @@ export const editorView: MilkdownPlugin = (ctx) => {
     .inject(editorViewOptionsCtx, {})
     .inject(rootDOMCtx, null as unknown as HTMLElement)
     .inject(rootAttrsCtx, {})
-    .inject(editorViewTimerCtx, [EditorStateReady])
+    .inject(editorViewTimerCtx, [EditorStateReady, PasteRulesReady])
     .record(EditorViewReady)
 
   return async () => {
@@ -128,6 +131,17 @@ export const editorView: MilkdownPlugin = (ctx) => {
       state,
       nodeViews,
       markViews,
+      transformPasted: (slice, view, isPlainText) => {
+        ctx
+          .get(pasteRulesCtx)
+          .sort((a, b) => (b.priority ?? 50) - (a.priority ?? 50))
+          .map((rule) => rule.run)
+          .forEach((runner) => {
+            slice = runner(slice, view, isPlainText)
+          })
+
+        return slice
+      },
       ...options,
     })
     prepareViewDom(view.dom)

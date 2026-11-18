@@ -1,16 +1,16 @@
 import type { Ctx } from '@milkdown/ctx'
+import type { EditorView } from '@milkdown/prose/view'
+
 import { editorViewCtx } from '@milkdown/core'
 import { browser } from '@milkdown/prose'
-import type { Selection } from '@milkdown/prose/state'
 import { NodeSelection } from '@milkdown/prose/state'
-import type { EditorView } from '@milkdown/prose/view'
-import throttle from 'lodash.throttle'
+import { throttle } from 'lodash-es'
 
 import type { FilterNodes } from './block-config'
-import { blockConfig } from './block-config'
-import { selectRootNodeByDom } from './__internal__/select-node-by-dom'
-import { serializeForClipboard } from './__internal__/serialize-for-clipboard'
 import type { ActiveNode } from './types'
+
+import { selectRootNodeByDom } from './__internal__/select-node-by-dom'
+import { blockConfig } from './block-config'
 
 const brokenClipboardAPI =
   (browser.ie && <number>browser.ie_version < 15) ||
@@ -32,6 +32,16 @@ export type BlockServiceMessageType =
 export type BlockServiceMessage = (message: BlockServiceMessageType) => void
 
 /// @internal
+/// prosemirror-view keeps an optional `node` on `view.dragging`: the
+/// `NodeSelection` of the node being dragged. Both prosemirror-view and
+/// prosemirror-drop-indicator use it in `handleDrop` to remove exactly that
+/// node, and fall back to `tr.deleteSelection()` when it is absent. The field
+/// is missing from the published types, so this type widens it.
+type Dragging = NonNullable<EditorView['dragging']> & {
+  node?: NodeSelection
+}
+
+/// @internal
 /// The block service, provide events and methods for block plugin.
 /// Generally you don't need to use this class directly.
 export class BlockService {
@@ -39,10 +49,12 @@ export class BlockService {
   #ctx?: Ctx
 
   /// @internal
-  #createSelection: () => null | Selection = () => {
+  #createSelection: () => null | NodeSelection = () => {
     if (!this.#active) return null
     const result = this.#active
     const view = this.#view
+
+    this.#activeSelection = null
 
     if (view && NodeSelection.isSelectable(result.node)) {
       const nodeSelection = NodeSelection.create(
@@ -58,7 +70,7 @@ export class BlockService {
   }
 
   /// @internal
-  #activeSelection: null | Selection = null
+  #activeSelection: null | NodeSelection = null
   /// @internal
   #active: null | ActiveNode = null
   /// @internal
@@ -69,7 +81,11 @@ export class BlockService {
 
   /// @internal
   get #filterNodes(): FilterNodes | undefined {
-    return this.#ctx?.get(blockConfig.key).filterNodes
+    try {
+      return this.#ctx?.get(blockConfig.key).filterNodes
+    } catch {
+      return undefined
+    }
   }
 
   /// @internal
@@ -103,6 +119,7 @@ export class BlockService {
     dom.addEventListener('mousedown', this.#handleMouseDown)
     dom.addEventListener('mouseup', this.#handleMouseUp)
     dom.addEventListener('dragstart', this.#handleDragStart)
+    dom.addEventListener('dragend', this.#handleDragEnd)
   }
 
   /// Remove mouse event to the dom.
@@ -110,6 +127,7 @@ export class BlockService {
     dom.removeEventListener('mousedown', this.#handleMouseDown)
     dom.removeEventListener('mouseup', this.#handleMouseUp)
     dom.removeEventListener('dragstart', this.#handleDragStart)
+    dom.removeEventListener('dragend', this.#handleDragEnd)
   }
 
   /// Unbind the notify function.
@@ -149,7 +167,7 @@ export class BlockService {
     if (event.dataTransfer && selection) {
       const slice = selection.content()
       event.dataTransfer.effectAllowed = 'copyMove'
-      const { dom, text } = serializeForClipboard(view, slice)
+      const { dom, text } = view.serializeForClipboard(slice)
       event.dataTransfer.clearData()
       event.dataTransfer.setData(
         brokenClipboardAPI ? 'Text' : 'text/html',
@@ -159,11 +177,35 @@ export class BlockService {
       const activeEl = this.#active?.el
       if (activeEl) event.dataTransfer.setDragImage(activeEl, 0, 0)
 
-      view.dragging = {
+      // Pass prosemirror the node selection captured on mousedown, so
+      // the move deletes that node. Without it prosemirror falls back to
+      // `tr.deleteSelection()` on the live selection at drop time, which
+      // can strip the text and leave an empty block.
+      const dragging: Dragging = {
         slice,
         move: true,
+        node: selection,
       }
+      view.dragging = dragging
     }
+  }
+
+  /// @internal
+  #handleDragEnd = () => {
+    const view = this.#view
+    if (!view) return
+
+    this.#dragEnd(view)
+
+    // `dragend` fires on the handle, which lives outside `view.dom`, so
+    // prosemirror-view's own dragend cleanup never runs for handle drags and
+    // `view.dragging` would survive a cancelled drag. Clear it the way
+    // prosemirror-view does, guarding against browsers that fire `dragend`
+    // before `drop`.
+    const dragging = view.dragging
+    window.setTimeout(() => {
+      if (view.dragging === dragging) view.dragging = null
+    }, 50)
   }
 
   /// @internal

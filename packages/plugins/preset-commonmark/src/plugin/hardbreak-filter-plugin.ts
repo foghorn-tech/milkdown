@@ -1,8 +1,10 @@
 import { Plugin, PluginKey } from '@milkdown/prose/state'
+import { ReplaceStep } from '@milkdown/prose/transform'
 import { $ctx, $prose } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
-/// This slice contains the nodes that within which the hardbreak will be ignored.
+/// This slice holds the nodes that ignore a hardbreak inside them.
 export const hardbreakFilterNodes = $ctx(
   ['table', 'code_block'],
   'hardbreakFilterNodes'
@@ -13,8 +15,8 @@ withMeta(hardbreakFilterNodes, {
   group: 'Prose',
 })
 
-/// This plugin is used to filter the hardbreak node.
-/// If the hardbreak is going to be inserted within a node that is in the `hardbreakFilterNodes`, ignore it.
+/// This plugin filters the hardbreak node. It ignores a hardbreak that
+/// lands inside a node listed in `hardbreakFilterNodes`.
 export const hardbreakFilterPlugin = $prose((ctx) => {
   const notIn = ctx.get(hardbreakFilterNodes.key)
   return new Plugin({
@@ -22,9 +24,8 @@ export const hardbreakFilterPlugin = $prose((ctx) => {
     filterTransaction: (tr, state) => {
       const isInsertHr = tr.getMeta('hardbreak')
       const [step] = tr.steps
-      if (isInsertHr && step) {
-        const { from } = step as unknown as { from: number }
-        const $from = state.doc.resolve(from)
+      if (isInsertHr && step instanceof ReplaceStep) {
+        const $from = state.doc.resolve(step.from)
         let curDepth = $from.depth
         let canApply = true
         while (curDepth > 0) {

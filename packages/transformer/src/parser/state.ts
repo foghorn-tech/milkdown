@@ -5,22 +5,24 @@ import type {
   NodeType,
   Schema,
 } from '@milkdown/prose/model'
+
 import {
   createNodeInParserFail,
   parserMatchError,
   stackOverFlow,
 } from '@milkdown/exception'
 import { Mark } from '@milkdown/prose/model'
+
 import type {
   MarkSchema,
   MarkdownNode,
   NodeSchema,
   RemarkParser,
 } from '../utility'
-import { Stack } from '../utility'
-
-import { ParserStackElement } from './stack-element'
 import type { Parser } from './types'
+
+import { Stack } from '../utility'
+import { ParserStackElement } from './stack-element'
 
 /// A state machine for parser. Transform remark AST into prosemirror state.
 export class ParserState extends Stack<Node, ParserStackElement> {
@@ -45,7 +47,7 @@ export class ParserState extends Stack<Node, ParserStackElement> {
   }
 
   /// @internal
-  protected constructor(schema: Schema) {
+  constructor(schema: Schema) {
     super()
     this.schema = schema
   }
@@ -109,7 +111,11 @@ export class ParserState extends Stack<Node, ParserStackElement> {
 
   /// Close the current node and push it into the parent node.
   closeNode = () => {
-    this.#closeNodeAndPush()
+    try {
+      this.#closeNodeAndPush()
+    } catch (e) {
+      console.error(e)
+    }
     return this
   }
 
@@ -129,7 +135,11 @@ export class ParserState extends Stack<Node, ParserStackElement> {
 
   /// Add a node into current node.
   addNode = (nodeType: NodeType, attrs?: Attrs, content?: Node[]) => {
-    this.#addNodeAndPush(nodeType, attrs, content)
+    try {
+      this.#addNodeAndPush(nodeType, attrs, content)
+    } catch (e) {
+      console.error(e)
+    }
     return this
   }
 
@@ -149,24 +159,29 @@ export class ParserState extends Stack<Node, ParserStackElement> {
 
   /// Add a text node into current node.
   addText = (text: string) => {
-    const topElement = this.top()
-    if (!topElement) throw stackOverFlow()
+    try {
+      const topElement = this.top()
+      if (!topElement) throw stackOverFlow()
 
-    const prevNode = topElement.pop()
-    const currNode = this.schema.text(text, this.#marks)
+      const prevNode = topElement.pop()
+      const currNode = this.schema.text(text, this.#marks)
 
-    if (!prevNode) {
-      topElement.push(currNode)
+      if (!prevNode) {
+        topElement.push(currNode)
+        return this
+      }
+
+      const merged = this.#maybeMerge(prevNode, currNode)
+      if (merged) {
+        topElement.push(merged)
+        return this
+      }
+      topElement.push(prevNode, currNode)
+      return this
+    } catch (e) {
+      console.error(e)
       return this
     }
-
-    const merged = this.#maybeMerge(prevNode, currNode)
-    if (merged) {
-      topElement.push(merged)
-      return this
-    }
-    topElement.push(prevNode, currNode)
-    return this
   }
 
   /// @internal
@@ -179,14 +194,15 @@ export class ParserState extends Stack<Node, ParserStackElement> {
     return doc
   }
 
-  /// Give the node or node list back to the state and
-  /// the state will find a proper runner (by `match` method in parser spec) to handle it.
+  /// Give the node or node list back to the state and the state will find a
+  /// proper runner (by `match` method in parser spec) to handle it.
   next = (nodes: MarkdownNode | MarkdownNode[] = []) => {
     ;[nodes].flat().forEach((node) => this.#runNode(node))
     return this
   }
 
-  /// Build the current state into a [prosemirror document](https://prosemirror.net/docs/ref/#model.Document_Structure).
+  /// Build the current state into a
+  /// [prosemirror document](https://prosemirror.net/docs/ref/#model.Document_Structure).
   toDoc = () => this.build()
 
   /// Transform a markdown string into prosemirror state.

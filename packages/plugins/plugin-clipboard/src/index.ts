@@ -1,43 +1,37 @@
+import type { EditorView } from '@milkdown/prose/view'
+
 import {
   editorViewOptionsCtx,
   parserCtx,
   schemaCtx,
   serializerCtx,
 } from '@milkdown/core'
-import { getNodeFromSchema } from '@milkdown/prose'
-import type { Node, Slice } from '@milkdown/prose/model'
-import { DOMParser, DOMSerializer } from '@milkdown/prose/model'
+import { getNodeFromSchema, isTextOnlySlice } from '@milkdown/prose'
+import {
+  DOMParser,
+  DOMSerializer,
+  type Node as ProsemirrorNode,
+  type Slice,
+} from '@milkdown/prose/model'
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state'
 import { $prose } from '@milkdown/utils'
 
-type UnknownRecord = Record<string, unknown>
-function isPureText(
-  content: UnknownRecord | UnknownRecord[] | undefined | null
-): boolean {
-  if (!content) return false
-  if (Array.isArray(content)) {
-    if (content.length > 1) return false
-    return isPureText(content[0])
+import { isPureText } from './__internal__/is-pure-text'
+import { withMeta } from './__internal__/with-meta'
+
+function dispatchPasteSlice(view: EditorView, slice: Slice): boolean {
+  const node = isTextOnlySlice(slice)
+  if (node) {
+    view.dispatch(view.state.tr.replaceSelectionWith(node, true))
+    return true
   }
 
-  const child = content.content
-  if (child) return isPureText(child as UnknownRecord[])
-
-  return content.type === 'text'
-}
-
-function isTextOnlySlice(slice: Slice): Node | false {
-  if (slice.content.childCount === 1) {
-    const node = slice.content.firstChild
-    if (node?.type.name === 'text' && node.marks.length === 0) return node
-
-    if (node?.type.name === 'paragraph' && node.childCount === 1) {
-      const _node = node.firstChild
-      if (_node?.type.name === 'text' && _node.marks.length === 0) return _node
-    }
+  try {
+    view.dispatch(view.state.tr.replaceSelection(slice))
+    return true
+  } catch {
+    return false
   }
-
-  return false
 }
 
 /// The prosemirror plugin for clipboard.
@@ -48,13 +42,33 @@ export const clipboard = $prose((ctx) => {
   ctx.update(editorViewOptionsCtx, (prev) => ({
     ...prev,
     editable: prev.editable ?? (() => true),
+    transformPastedHTML: (html: string, view: EditorView) => {
+      const prevTransform = prev.transformPastedHTML
+      if (prevTransform) html = prevTransform(html, view)
+
+      // Google Docs wraps pasted content in a `<b>` element that carries
+      // `font-weight:normal` and a `docs-internal-guid` id. That wrapper
+      // makes the ProseMirror parser fail on several tables. Strip it to
+      // lift the block content to the top level.
+      if (html.includes('docs-internal-guid')) {
+        html = html.replace(
+          /<b[^>]*id="docs-internal-guid[^"]*"[^>]*>([\s\S]*)<\/b>/,
+          '$1'
+        )
+        // Google Docs also wraps each table in a `<div dir="ltr">`, and
+        // that wrapper disturbs `parseSlice` on several tables. Unwrap
+        // it too.
+        html = html.replace(/<div[^>]*>(<table[\s\S]*?<\/table>)<\/div>/g, '$1')
+      }
+      return html
+    },
   }))
 
   const key = new PluginKey('MILKDOWN_CLIPBOARD')
   const plugin = new Plugin({
     key,
     props: {
-      handlePaste: (view, event) => {
+      handlePaste: (view, event, preProcessedSlice) => {
         const parser = ctx.get(parserCtx)
         const editable = view.props.editable?.(view.state)
         const { clipboardData } = event
@@ -90,8 +104,17 @@ export const clipboard = $prose((ctx) => {
         const html = clipboardData.getData('text/html')
         if (html.length === 0 && text.length === 0) return false
 
+        // Present HTML brings a pre-processed Slice from ProseMirror.
+        // `parseFromClipboard` already ran `transformPastedHTML`, which
+        // strips the Google Docs wrapper, and `transformPasted`, which
+        // runs a paste rule such as the table header fix. That Slice
+        // beats a fresh parse here.
+        if (html.length > 0 && preProcessedSlice) {
+          return dispatchPasteSlice(view, preProcessedSlice)
+        }
+
         const domParser = DOMParser.fromSchema(schema)
-        let dom
+        let dom: Node
         if (html.length === 0) {
           const slice = parser(text)
           if (!slice || typeof slice === 'string') return false
@@ -107,20 +130,13 @@ export const clipboard = $prose((ctx) => {
         }
 
         const slice = domParser.parseSlice(dom)
-        const node = isTextOnlySlice(slice)
-        if (node) {
-          view.dispatch(view.state.tr.replaceSelectionWith(node, true))
-          return true
-        }
-
-        view.dispatch(view.state.tr.replaceSelection(slice))
-        return true
+        return dispatchPasteSlice(view, slice)
       },
       clipboardTextSerializer: (slice) => {
         const serializer = ctx.get(serializerCtx)
         const isText = isPureText(slice.content.toJSON())
         if (isText)
-          return (slice.content as unknown as Node).textBetween(
+          return (slice.content as unknown as ProsemirrorNode).textBetween(
             0,
             slice.content.size,
             '\n\n'
@@ -137,7 +153,4 @@ export const clipboard = $prose((ctx) => {
   return plugin
 })
 
-clipboard.meta = {
-  displayName: 'Prose<clipboard>',
-  package: '@milkdown/plugin-clipboard',
-}
+withMeta(clipboard, { displayName: 'Prose<clipboard>' })

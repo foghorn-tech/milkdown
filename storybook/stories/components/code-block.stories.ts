@@ -1,16 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/html'
+
+import { defaultKeymap } from '@codemirror/commands'
+import { languages } from '@codemirror/language-data'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { keymap } from '@codemirror/view'
 import {
   codeBlockComponent,
   codeBlockConfig,
 } from '@milkdown/kit/component/code-block'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { languages } from '@codemirror/language-data'
 import { basicSetup } from 'codemirror'
-import { defaultKeymap } from '@codemirror/commands'
-import { keymap } from '@codemirror/view'
-import { html } from 'atomico'
 
 import type { CommonArgs } from '../utils/shadow'
+
 import { setupMilkdown } from '../utils/shadow'
 import style from './code-block.css?inline'
 
@@ -19,23 +20,6 @@ const meta: Meta = {
 }
 
 export default meta
-
-const check = html`
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke-width="1.5"
-    stroke="currentColor"
-    class="w-6 h-6"
-  >
-    <path
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      d="M4.5 12.75l6 6 9-13.5"
-    />
-  </svg>
-`
 
 const markdown = `
 # Code Block
@@ -54,10 +38,8 @@ export const Javascript: StoryObj<CommonArgs> = {
             ...defaultConfig,
             languages,
             extensions: [basicSetup, oneDark, keymap.of(defaultKeymap)],
-            renderLanguage: (language, selected) => {
-              return html`<span class="leading">${selected ? check : null}</span
-                >${language}`
-            },
+            renderLanguage: (language, selected) =>
+              `${selected ? '✓' : '   '} ${language}`,
           }))
         })
         .use(codeBlockComponent)
@@ -66,5 +48,61 @@ export const Javascript: StoryObj<CommonArgs> = {
   args: {
     defaultValue: markdown,
     readonly: false,
+  },
+}
+
+export const Preview: StoryObj<CommonArgs> = {
+  render: (args) => {
+    return setupMilkdown([style], args, (editor) => {
+      editor
+        .config((ctx) => {
+          ctx.update(codeBlockConfig.key, (defaultConfig) => ({
+            ...defaultConfig,
+            languages,
+            extensions: [basicSetup, oneDark, keymap.of(defaultKeymap)],
+            renderLanguage: (language, selected) =>
+              `${selected ? '✓' : '   '} ${language}`,
+            renderPreview: (language, content, applyPreview) => {
+              // async rendering
+              if (language === 'JavaScript') {
+                setTimeout(() => {
+                  applyPreview(`<div>Preview: ${content}</div>`)
+                }, 1000)
+                return
+              }
+
+              // sync rendering
+              if (language === 'TypeScript') {
+                return `<div>Preview: ${content}</div>`
+              }
+
+              // no preview
+              return null
+            },
+            previewToggleButton: (previewOnlyMode) =>
+              previewOnlyMode ? '|🪖Show' : '|🫥Hide',
+            previewLoading: 'Preview Rendering...',
+          }))
+        })
+        .use(codeBlockComponent)
+    })
+  },
+  args: {
+    defaultValue: `
+# Code Block
+
+\`\`\`JavaScript
+const a = 1;
+\`\`\`
+
+\`\`\`TypeScript
+function () {}
+\`\`\`
+
+\`\`\`css
+h {}
+\`\`\`
+`,
+    readonly: true,
   },
 }

@@ -1,9 +1,12 @@
+import type { Node as ProseNode } from '@milkdown/prose/model'
+
 import { expectDomTypeError } from '@milkdown/exception'
 import { toggleMark } from '@milkdown/prose/commands'
-import type { Node as ProseNode } from '@milkdown/prose/model'
 import { TextSelection } from '@milkdown/prose/state'
 import { $command, $markAttr, $markSchema } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
+import { sanitizeLinkHref } from './sanitize-href'
 
 /// HTML attributes for the link mark.
 export const linkAttr = $markAttr('link')
@@ -16,8 +19,8 @@ withMeta(linkAttr, {
 /// Link mark schema.
 export const linkSchema = $markSchema('link', (ctx) => ({
   attrs: {
-    href: {},
-    title: { default: null },
+    href: { validate: 'string' },
+    title: { default: null, validate: 'string|null' },
   },
   parseDOM: [
     {
@@ -32,7 +35,16 @@ export const linkSchema = $markSchema('link', (ctx) => ({
       },
     },
   ],
-  toDOM: (mark) => ['a', { ...ctx.get(linkAttr.key)(mark), ...mark.attrs }],
+  toDOM: (mark) => [
+    'a',
+    {
+      ...ctx.get(linkAttr.key)(mark),
+      ...mark.attrs,
+      // Neutralize `javascript:`/`data:` and other unsafe schemes before
+      // they become a real, clickable anchor (also covers `getHTML()`).
+      href: sanitizeLinkHref(mark.attrs.href),
+    },
+  ],
   parseMarkdown: {
     match: (node) => node.type === 'link',
     runner: (state, node, markType) => {

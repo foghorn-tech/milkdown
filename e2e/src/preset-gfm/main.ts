@@ -1,11 +1,10 @@
 import { Editor, rootCtx } from '@milkdown/core'
-import { nord } from '@milkdown/theme-nord'
-import { commonmark } from '@milkdown/preset-commonmark'
 import { history } from '@milkdown/plugin-history'
+import { commonmark } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
+import { nord } from '@milkdown/theme-nord'
 
 import { setup } from '../utils'
-
 import '@milkdown/theme-nord/style.css'
 
 import '../style.css'
@@ -21,4 +20,4 @@ setup(() => {
     .use(gfm)
     .use(history)
     .create()
-})
+}).catch(console.error)

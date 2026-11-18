@@ -1,8 +1,10 @@
 import type { Ctx, MilkdownPlugin } from '@milkdown/ctx'
+import type { RemarkPlugin, RemarkPluginRaw } from '@milkdown/transformer'
+
 import { InitReady, remarkPluginsCtx } from '@milkdown/core'
 
-import type { RemarkPlugin, RemarkPluginRaw } from '@milkdown/transformer'
 import type { $Ctx } from '../$ctx'
+
 import { $ctx } from '../$ctx'
 
 /// @internal
@@ -15,8 +17,10 @@ export type $Remark<Id extends string, Options> = [
   options: $Ctx<Options, Id>
 }
 
-/// Create a milkdown wrapper for [remark plugin](https://github.com/remarkjs/remark/blob/main/doc/plugins.md).
-/// It takes a factory function which returns a [remark plugin](https://github.com/remarkjs/remark/blob/main/doc/plugins.md).
+/// Create a milkdown wrapper for
+/// [remark plugin](https://github.com/remarkjs/remark/blob/main/doc/plugins.md).
+/// It takes a factory function which returns a
+/// [remark plugin](https://github.com/remarkjs/remark/blob/main/doc/plugins.md).
 ///
 /// Additional property:
 /// - `id`: The id of the remark plugin.

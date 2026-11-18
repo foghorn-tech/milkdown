@@ -1,9 +1,15 @@
+import type { Ctx } from '@milkdown/ctx'
+
 import { commandsCtx } from '@milkdown/core'
 import { setBlockType } from '@milkdown/prose/commands'
 import { $command, $nodeAttr, $nodeSchema, $useKeymap } from '@milkdown/utils'
-import { serializeText, withMeta } from '../__internal__'
+
+import {
+  EMPTY_LINE_PLACEHOLDER,
+  serializeText,
+  withMeta,
+} from '../__internal__'
 import { remarkPreserveEmptyLinePlugin } from '../plugin/remark-preserve-empty-line'
-import type { Ctx } from '@milkdown/ctx'
 
 /// HTML attributes for paragraph node.
 export const paragraphAttr = $nodeAttr('paragraph')
@@ -37,7 +43,7 @@ export const paragraphSchema = $nodeSchema('paragraph', (ctx) => ({
         (!node.content || node.content.size === 0) &&
         shouldPreserveEmptyLine(ctx)
       ) {
-        state.addNode('html', undefined, '<br />')
+        state.addNode('html', undefined, EMPTY_LINE_PLACEHOLDER)
       } else {
         serializeText(state, node)
       }
@@ -47,14 +53,9 @@ export const paragraphSchema = $nodeSchema('paragraph', (ctx) => ({
 }))
 
 function shouldPreserveEmptyLine(ctx: Ctx) {
-  let shouldPreserveEmptyLine = false
-  try {
-    ctx.get(remarkPreserveEmptyLinePlugin.id)
-    shouldPreserveEmptyLine = true
-  } catch {
-    shouldPreserveEmptyLine = false
-  }
-  return shouldPreserveEmptyLine
+  // The slice type, not the string id: string lookups scan every
+  // registered slice.
+  return ctx.isInjected(remarkPreserveEmptyLinePlugin.options.key)
 }
 
 withMeta(paragraphSchema.node, {

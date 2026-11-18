@@ -1,5 +1,4 @@
-import { $view } from '@milkdown/utils'
-import { tableSchema } from '@milkdown/preset-gfm'
+import type { Ctx } from '@milkdown/ctx'
 import type { Node } from '@milkdown/prose/model'
 import type {
   EditorView,
@@ -7,40 +6,54 @@ import type {
   NodeViewConstructor,
   ViewMutationRecord,
 } from '@milkdown/prose/view'
-import type { Ctx } from '@milkdown/ctx'
-import { NodeSelection, TextSelection } from '@milkdown/prose/state'
+
+import { tableSchema } from '@milkdown/preset-gfm'
 import { findParent } from '@milkdown/prose'
+import { NodeSelection, TextSelection } from '@milkdown/prose/state'
 import { CellSelection } from '@milkdown/prose/tables'
-import { defIfNotExists } from '../../__internal__/helper'
-import { tableBlockConfig } from '../config'
+import { $view } from '@milkdown/utils'
+import { createApp, shallowRef, type App, type ShallowRef } from 'vue'
+
 import { withMeta } from '../../__internal__/meta'
-import type { TableComponentProps } from './component'
-import { TableElement } from './component'
+import { tableBlockConfig } from '../config'
+import { TableBlock } from './component'
 
 export class TableNodeView implements NodeView {
-  dom: HTMLElement & TableComponentProps
+  dom: HTMLElement
   contentDOM: HTMLElement
+  app: App
+
+  nodeRef: ShallowRef<Node>
+
   constructor(
     public ctx: Ctx,
     public node: Node,
     public view: EditorView,
     public getPos: () => number | undefined
   ) {
-    const dom = document.createElement('milkdown-table-block') as HTMLElement &
-      TableComponentProps
-    this.dom = dom
-    dom.view = view
-    dom.ctx = ctx
-    dom.getPos = getPos
-    dom.node = node
-    dom.config = ctx.get(tableBlockConfig.key)
+    const dom = document.createElement('div')
+    dom.className = 'milkdown-table-block'
 
     const contentDOM = document.createElement('tbody')
     this.contentDOM = contentDOM
     contentDOM.setAttribute('data-content-dom', 'true')
     contentDOM.classList.add('content-dom')
+    this.nodeRef = shallowRef(node)
 
-    dom.appendChild(contentDOM)
+    const app = createApp(TableBlock, {
+      view,
+      ctx,
+      getPos,
+      config: ctx.get(tableBlockConfig.key),
+      onMount: (div: Element) => {
+        div.appendChild(contentDOM)
+      },
+      node: this.nodeRef,
+    })
+    app.mount(dom)
+    this.app = app
+
+    this.dom = dom
   }
 
   update(node: Node) {
@@ -50,7 +63,7 @@ export class TableNodeView implements NodeView {
       return false
 
     this.node = node
-    this.dom.node = node
+    this.nodeRef.value = node
 
     return true
   }
@@ -72,7 +85,8 @@ export class TableNodeView implements NodeView {
 
     if (!node) return false
 
-    // if the selection is a text selection, and the current node is the same as the node, return false
+    // A click inside the cell that already holds the caret keeps the
+    // text selection instead of replacing it with a node selection.
     if (state.selection instanceof TextSelection) {
       const currentNode = findParent(
         (node) =>
@@ -101,8 +115,8 @@ export class TableNodeView implements NodeView {
   stopEvent(e: Event) {
     if (e.type === 'drop' || e.type.startsWith('drag')) return true
 
-    if (e.type === 'mousedown') {
-      if (e.target instanceof HTMLButtonElement) return true
+    if (e.type === 'mousedown' || e.type === 'pointerdown') {
+      if (e.target instanceof Element && e.target.closest('button')) return true
 
       const target = e.target
       if (
@@ -129,9 +143,14 @@ export class TableNodeView implements NodeView {
 
     return true
   }
+
+  destroy() {
+    this.app.unmount()
+    this.dom.remove()
+    this.contentDOM.remove()
+  }
 }
 
-defIfNotExists('milkdown-table-block', TableElement)
 export const tableBlockView = $view(
   tableSchema.node,
   (ctx): NodeViewConstructor => {

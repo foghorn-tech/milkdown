@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { focusEditor, getMarkdown } from '../misc'
+
+import { focusEditor, getMarkdown, setMarkdown } from '../misc'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/preset-commonmark/')
@@ -30,4 +31,37 @@ test('bold with a single character', async ({ page }) => {
   await expect(editor.locator('strong')).toHaveText('o')
   const markdown = await getMarkdown(page)
   expect(markdown).toBe('The lunatic is **o**n the grass\n')
+})
+
+test('should not parse when preceded by word and followed by quote', async ({
+  page,
+}) => {
+  const editor = page.locator('.editor')
+  await focusEditor(page)
+  await page.keyboard.type('a**"foo"**')
+
+  await expect(editor.locator('strong')).toHaveCount(0)
+
+  const markdown = await getMarkdown(page)
+  // The markdown stays unchanged. The Milkdown serializer appends the
+  // newline.
+  expect(markdown).toBe('a\\*\\*"foo"\\*\\*\n')
+})
+
+test('should not parse double underscore inside word', async ({ page }) => {
+  const editor = page.locator('.editor')
+  await focusEditor(page)
+  await page.keyboard.type('foo__bar__baz')
+
+  await expect(editor.locator('strong')).toHaveCount(0)
+
+  const markdown = await getMarkdown(page)
+  expect(markdown).toBe('foo__bar__baz\n')
+
+  await setMarkdown(page, '')
+  await expect(editor.locator('p')).toHaveText('')
+  await setMarkdown(page, markdown)
+  await expect(editor.locator('p')).toHaveText('foo__bar__baz')
+  await expect(editor.locator('strong, em')).toHaveCount(0)
+  expect(await getMarkdown(page)).toBe(markdown)
 })

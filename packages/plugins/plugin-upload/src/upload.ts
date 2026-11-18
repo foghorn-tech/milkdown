@@ -1,8 +1,10 @@
-import { schemaCtx } from '@milkdown/core'
+import type { Ctx } from '@milkdown/ctx'
 import type { Fragment, Node, Schema } from '@milkdown/prose/model'
 import type { EditorState } from '@milkdown/prose/state'
-import { Plugin, PluginKey } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
+
+import { schemaCtx } from '@milkdown/core'
+import { Plugin, PluginKey } from '@milkdown/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/prose/view'
 import { $ctx, $prose } from '@milkdown/utils'
 
@@ -17,16 +19,19 @@ interface Spec {
 
 /// The configuration for upload.
 export interface UploadOptions {
-  /// The uploader for upload plugin.
-  /// It takes the files and schema as parameters.
-  /// It should return a `Promise` of Prosemirror `Fragment` or `Node` or `Node[]`.
+  /// The uploader for the upload plugin. It takes the files, the schema,
+  /// the ctx and the insert position. It returns a `Promise` of a
+  /// prosemirror `Fragment`, `Node` or `Node[]`.
   uploader: (
     files: FileList,
-    schema: Schema
+    schema: Schema,
+    ctx: Ctx,
+    insertPos: number
   ) => Promise<Fragment | Node | Node[]>
-  /// Whether to enable the html file uploader.
-  /// When paste files from html (for example copy images by right click context menu),
-  /// this option will make the plugin to upload the image copied instead of using the original link.
+  /// Whether to enable the html file uploader. A paste of files from
+  /// html, for example an image copied through the right-click context
+  /// menu, then uploads the copied image instead of keeping the original
+  /// link.
   enableHtmlFileUploader: boolean
   /// The factory for upload widget.
   /// The widget will be displayed when the file is uploading.
@@ -37,6 +42,12 @@ export interface UploadOptions {
     pos: number,
     spec: Parameters<typeof Decoration.widget>[2]
   ) => Decoration
+  // A custom calculator for new nodes to insert
+  getInsertPos?: (
+    event: ClipboardEvent | DragEvent,
+    ctx: Ctx,
+    defaultInsertPos: number
+  ) => number
 }
 
 /// A slice that contains the configuration for upload.
@@ -84,16 +95,23 @@ export const uploadPlugin = $prose((ctx) => {
 
     const id = Symbol('upload symbol')
     const schema = ctx.get(schemaCtx)
+    const { uploader, getInsertPos } = ctx.get(uploadConfig.key)
     const { tr } = view.state
-    const insertPos =
+
+    const defaultInsertPos =
       event instanceof DragEvent
         ? (view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ??
           tr.selection.from)
         : tr.selection.from
+
+    const insertPos =
+      typeof getInsertPos === 'function'
+        ? getInsertPos(event, ctx, defaultInsertPos)
+        : defaultInsertPos
+
     view.dispatch(tr.setMeta(pluginKey, { add: { id, pos: insertPos } }))
 
-    const { uploader } = ctx.get(uploadConfig.key)
-    uploader(files, schema)
+    uploader(files, schema, ctx, insertPos)
       .then((fragment) => {
         const pos = findPlaceholder(view.state, id)
         if (pos < 0) return
@@ -105,7 +123,6 @@ export const uploadPlugin = $prose((ctx) => {
         )
       })
       .catch((e) => {
-        // eslint-disable-next-line no-console
         console.error(e)
       })
     return true

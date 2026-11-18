@@ -1,5 +1,7 @@
-import { commandsCtx } from '@milkdown/core'
 import type { MarkType } from '@milkdown/prose/model'
+
+import { commandsCtx } from '@milkdown/core'
+import { markRule } from '@milkdown/prose'
 import {
   $command,
   $inputRule,
@@ -7,7 +9,7 @@ import {
   $markSchema,
   $useKeymap,
 } from '@milkdown/utils'
-import { markRule } from '@milkdown/prose'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for the inlineCode mark.
@@ -22,6 +24,11 @@ withMeta(inlineCodeAttr, {
 export const inlineCodeSchema = $markSchema('inlineCode', (ctx) => ({
   priority: 100,
   code: true,
+  // A code span has a closed end. Text typed after it stays outside it,
+  // and typing is the only way to leave a span that ends a block. A code
+  // mark on a delimiter also stays meaningful, because the delimiter
+  // then sits inside the span. The mark input rules read that state.
+  inclusive: false,
   parseDOM: [{ tag: 'code' }],
   toDOM: (mark) => ['code', ctx.get(inlineCodeAttr.key)(mark)],
   parseMarkdown: {
@@ -36,6 +43,7 @@ export const inlineCodeSchema = $markSchema('inlineCode', (ctx) => ({
     match: (mark) => mark.type.name === 'inlineCode',
     runner: (state, mark, node) => {
       state.withMark(mark, 'inlineCode', node.text || '')
+      return true
     },
   },
 }))
@@ -69,14 +77,12 @@ export const toggleInlineCodeCommand = $command(
       (x) => x !== inlineCodeSchema.type.name
     )
 
-    // remove other marks
     restMarksName
       .map((name) => state.schema.marks[name] as MarkType)
       .forEach((t) => {
         tr.removeMark(from, to, t)
       })
 
-    // add inlineCode mark
     dispatch?.(tr.addMark(from, to, inlineCodeSchema.type(ctx).create()))
     return true
   }

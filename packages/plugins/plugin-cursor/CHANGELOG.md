@@ -1,5 +1,997 @@
 # @milkdown/plugin-cursor
 
+## 7.23.0
+
+### Minor Changes
+
+- 8068e9c: Milkdown patch version release.
+
+  ## Feat
+  - feat(crepe): switch the code block theme at runtime (#2489)
+
+  ## Fix
+  - fix(preset-commonmark): keep hardbreak attrs and map the step range when clearing marks (#2498)
+  - fix(preset-commonmark): keep remarkLineBreak linear on long runs of spaces (#2504)
+  - fix(crepe): keep prices like $5 and $10 from becoming inline math (#2497)
+  - fix(crepe): show the top bar items again after a readonly round trip (#2496)
+
+  ## Chore
+  - chore: bump up postcss-nested version to v9 (#2500)
+
+  ## Ci
+  - ci: key the Playwright browser cache on the runner image (#2509)
+
+### Patch Changes
+
+- Updated dependencies [8068e9c]
+  - @milkdown/ctx@7.23.0
+  - @milkdown/prose@7.23.0
+  - @milkdown/utils@7.23.0
+
+## 7.22.3
+
+### Patch Changes
+
+- ed370e3: Milkdown patch version release.
+
+  ## Fix
+  - fix(components): stop non-interactive list markers from swallowing pointer events (#2471)
+  - fix(deps): update markdown serializer for stable autolinks (#2482)
+  - fix(preset-commonmark): read an absent image title as an empty string (#2478)
+  - fix(plugin-tooltip): a throttled update must not skip a real state change (#2485)
+
+  ## Chore
+  - chore: bump up all non-major dependencies (#2479)
+
+  ## Perf
+  - perf(components): restore list item caret once per view per frame (#2484)
+
+- Updated dependencies [ed370e3]
+  - @milkdown/ctx@7.22.3
+  - @milkdown/prose@7.22.3
+  - @milkdown/utils@7.22.3
+
+## 7.22.2
+
+### Patch Changes
+
+- 0c2f425: Milkdown patch version release.
+
+  ## Feat
+  - feat(preset-commonmark): make block container types extensible via ctx (#2465)
+
+  ## Fix
+  - fix(ctx): clear the timeout when a timer settles (#2473)
+  - fix: keep user-authored inline br when loading markdown (#2463)
+  - fix(plugin-streaming): parse inline math in streamed content (#2464)
+
+  ## Chore
+  - chore: bump up all dependencies (#2459)
+  - chore: bump up prosemirror-highlight version to ^0.16.0 (#2460)
+  - chore: bump up vitest version to v4.1.11 [SECURITY] (#2474)
+
+  ## Docs
+  - docs: apply a comment writing standard across the repo (#2468)
+
+  ## Test
+  - test(preset-commonmark): pin fragment serialization semantics (#2466)
+
+- Updated dependencies [0c2f425]
+  - @milkdown/ctx@7.22.2
+  - @milkdown/prose@7.22.2
+  - @milkdown/utils@7.22.2
+
+## 7.22.1
+
+### Patch Changes
+
+- 2c5f128: Milkdown patch version release.
+
+  ## Fix
+  - fix(components): sync readonly code block updates (#2455)
+  - fix: keep the dragged node on view.dragging when using the block handle (#2452)
+  - fix(preset-commonmark): make the inline code mark not inclusive (#2451)
+  - fix(prose): respect inline code in mark input rules (#2445)
+
+  ## Chore
+  - chore: Lock file maintenance (#2453)
+  - chore: bump up pkg-pr-new version to ^0.0.87 (#2450)
+  - chore: bump up dompurify version to v3.4.13 [SECURITY] (#2448)
+  - chore: bump up all non-major dependencies (#2444)
+  - chore: bump up pnpm to v11.19.0 (#2443)
+
+- Updated dependencies [2c5f128]
+  - @milkdown/ctx@7.22.1
+  - @milkdown/prose@7.22.1
+  - @milkdown/utils@7.22.1
+
+## 7.22.0
+
+### Minor Changes
+
+- bd890e0: Milkdown minor release.
+
+  ## Feat
+  - feat(crepe): expose the AI feature to a custom toolbar (#2438)
+  - feat(crepe): derive toolbar shortcuts from keymaps (#2437)
+  - feat(crepe): give toolbar items an accessible name (#2435)
+  - feat(crepe): add --crepe-base-font-size theme variable (#2432)
+  - feat(crepe): allow configuring slash menu root and floating options (#2426)
+
+  ## Fix
+  - fix(docs): pin builddocs to 1.x to fix api docs build (#2442)
+  - fix(prism): re-highlight non-first code blocks on language change (#2440)
+  - fix(preset): anchor mark input rules to the cursor to prevent paste corruption (#2433)
+  - fix: preserve schema registration order in extendSchema (#2370) (#2429)
+  - fix: track innerView.value for reactive re-render in latex inline tooltip (#2425)
+  - fix: give internal input elements a unique id (#2416) (#2424)
+  - fix: store list spread attribute as boolean (#2419) (#2423)
+  - fix: use TextSelection.between for list item cursor placement (#2422)
+  - fix: resolve list item selection against current doc (#2412)
+
+  ## Refactor
+  - refactor(crepe): forward block handle options explicitly (#2427)
+
+  ## Perf
+  - perf: reduce per-keystroke cost in keepTableAlignPlugin and prismPlugin (#2436)
+
+  ## Build
+  - build: upgrade to typescript 7 native compiler (#2418)
+
+  ## Ci
+  - ci(e2e): cache Playwright browsers and merge shard reports (#2431)
+
+### Patch Changes
+
+- Updated dependencies [bd890e0]
+  - @milkdown/ctx@7.22.0
+  - @milkdown/prose@7.22.0
+  - @milkdown/utils@7.22.0
+
+## 7.21.3
+
+### Patch Changes
+
+- 95b07b9: Milkdown fix version release.
+
+  ## Feat
+  - feat: add getMarkRange and selection snapshot test DSL to prose toolkit (#2406)
+
+  ## Fix
+  - fix: cancel list item RAF on destroy (#2409)
+  - fix: sanitize unsafe link hrefs and emoji html to prevent stored XSS (#2410)
+  - fix: serialize marks spanning multiple nodes as one continuous span (#2405)
+  - fix: renovate config
+
+- Updated dependencies [95b07b9]
+  - @milkdown/ctx@7.21.3
+  - @milkdown/prose@7.21.3
+  - @milkdown/utils@7.21.3
+
+## 7.21.2
+
+### Patch Changes
+
+- 3a54037: Milkdown patch version release.
+
+  ## Fix
+  - fix: import Fragment in image-input to fix paste link error (#2325) (#2386)
+  - fix: link tooltip empty-selection insert and outside-click dismiss (#2385)
+  - fix: cancel pending listener debounce on editor destroy (#2356) (#2384)
+  - fix: avoid importing katex in toolbar when latex feature is disabled (#2383)
+
+- Updated dependencies [3a54037]
+  - @milkdown/ctx@7.21.2
+  - @milkdown/prose@7.21.2
+  - @milkdown/utils@7.21.2
+
+## 7.21.1
+
+### Patch Changes
+
+- a612984: Milkdown patch version release.
+
+  ## Fix
+  - fix(crepe): avoid polynomial ReDoS when normalizing provider baseURL (#2366)
+  - fix(components): lazy-init SVG sanitizer to keep preview-panel SSR-safe (#2365)
+
+  ## Chore
+  - chore(deps): bump fast-uri to 3.1.2 to patch GHSA-v39h-62p7-jpjc (#2367)
+  - chore: Pin dependencies (#2364)
+  - chore: config renovate to pin github actions (#2363)
+
+- Updated dependencies [a612984]
+  - @milkdown/ctx@7.21.1
+  - @milkdown/prose@7.21.1
+  - @milkdown/utils@7.21.1
+
+## 7.21.0
+
+### Minor Changes
+
+- 9fc90c6: Milkdown minor version release.
+
+  The integration of AI features into the Milkdown editor.
+
+  ## Feat
+  - feat(crepe): add OpenAI and Anthropic AI providers (#2355)
+  - feat: ship UI surfaces for the AI feature (#2350)
+  - feat: expose onError callback for AI feature (#2338)
+  - feat: replace-selection mode for streaming plugin (#2335)
+  - feat: merge Diff+Streaming into CrepeFeature.AI with provider integration (#2330)
+  - feat: per-block diff for the range option (#2329)
+  - feat: per-block diff via LCS matching (#2328)
+  - feat: add insert-at-cursor mode for streaming plugin (#2318)
+  - feat: add support for diff rendering, apply and reject (#2312)
+
+  ## Fix
+  - fix(crepe): preserve marks in AI selection for single-paragraph ranges (#2359)
+  - fix(inline-latex): should not show edit tooltip for readonly mode (#2348)
+  - fix(components): allow foreignObject in code block preview for Mermaid v11+ flowcharts (#2332)
+  - fix: improve diff rendering for cross-boundary changes, empty widgets, and block deletions (#2324)
+
+  ## Docs
+  - docs(crepe): document built-in OpenAI / Anthropic providers (#2357)
+  - docs(crepe): document AI feature UI surfaces and config (#2354)
+  - docs: ✏️ fix crepe mismatch
+
+  ## Refactor
+  - refactor: remove broken config options from diff and streaming plugins (#2333)
+
+  ## Perf
+  - perf: lazy initialize CodeMirror for off-screen code blocks (#2313)
+
+### Patch Changes
+
+- Updated dependencies [9fc90c6]
+  - @milkdown/ctx@7.21.0
+  - @milkdown/prose@7.21.0
+  - @milkdown/utils@7.21.0
+
+## 7.20.0
+
+### Minor Changes
+
+- e137982: Milkdown minor version release.
+
+  ## Feat
+  - feat: add support for top bar (#2300)
+  - feat(crepe): integrate upload plugin in crepe (#2301)
+  - feat(image-block): add maxWidth and maxHeight config options (#2291)
+
+  ## Fix
+  - fix(preset-commonmark): ordered list label ignores start attribute (#2302)
+  - fix(prose): fix Enter key in lists on Chrome Android (#2293)
+  - fix(preset-commonmark): preserve ordered list custom start number (#2292)
+
+  ## Refactor
+  - refactor: fix some useless checks (#2298)
+  - refactor: use a meaningful function to explain why we need h and fragment (#2297)
+
+  ## Ci
+  - ci: remove eslint (#2290)
+
+### Patch Changes
+
+- Updated dependencies [e137982]
+  - @milkdown/ctx@7.20.0
+  - @milkdown/prose@7.20.0
+  - @milkdown/utils@7.20.0
+
+## 7.19.2
+
+### Patch Changes
+
+- 39f9064: Milkdown patch version release.
+
+  ## Fix
+  - fix(plugin-clipboard, preset-gfm): fix pasting multiple tables from Google Docs (#2286)
+
+- Updated dependencies [39f9064]
+  - @milkdown/ctx@7.19.2
+  - @milkdown/prose@7.19.2
+  - @milkdown/utils@7.19.2
+
+## 7.19.1
+
+### Patch Changes
+
+- b22143f: Milkdown patch version release.
+
+  ## Fix
+  - fix(preset-gfm): incorrect table parsing when pasting from Google Docs (#2283)
+  - fix(transformer): inline code with bold/italic marks produces wrong markdown (#2281)
+  - fix(preset-gfm): add empty content guard to table_header_row serializer (#2279)
+  - fix(plugin-listener): listener bug regards to debounce in react (#2268)
+
+  ## Chore
+  - chore: bump up sugar-high version to v1 (#2280)
+  - chore: bump up dompurify version to v3.3.2 [SECURITY] (#2267)
+
+- Updated dependencies [b22143f]
+  - @milkdown/ctx@7.19.1
+  - @milkdown/prose@7.19.1
+  - @milkdown/utils@7.19.1
+
+## 7.19.0
+
+### Minor Changes
+
+- cf36326: Milkdown minor version release.
+
+  ## Feat
+  - feat: 🎸 add optional onImageLoadError callback for image-block (#2251)
+
+  ## Fix
+  - fix: exports of crepe package point at incorrect path (#2252)
+
+### Patch Changes
+
+- Updated dependencies [cf36326]
+  - @milkdown/ctx@7.19.0
+  - @milkdown/prose@7.19.0
+  - @milkdown/utils@7.19.0
+
+## 7.18.0
+
+### Minor Changes
+
+- 3abf96e: Milkdown minor release.
+
+  ## Feat
+  - feat: implement robust email autolinking with new regexps and comprehensive E2E tests (#2217)
+  - feat: tooltip auto update (#2204)
+
+  ## Fix
+  - fix: handle dom tables properly when copy pasting (#2206)
+  - fix(plugin-block): add dragend event listener to block handle element (#2199)
+  - fix: simplify icon rendering by removing unnecessary ref and using innerHTML directly (#2200)
+  - fix: storybook vite config (#2198)
+
+### Patch Changes
+
+- Updated dependencies [3abf96e]
+  - @milkdown/ctx@7.18.0
+  - @milkdown/prose@7.18.0
+  - @milkdown/utils@7.18.0
+
+## 7.17.3
+
+### Patch Changes
+
+- 1b7dcbc: Milkdown patch version release.
+
+  ## Feat
+  - feat: add extra params & config for uploader (#2184)
+
+  ## Fix
+  - fix: previewLabel was always hidden (#2192)
+  - fix: use divs instead of nested buttons (#2189)
+  - fix: listener triggered when stored marks set (#2181)
+
+- Updated dependencies [1b7dcbc]
+  - @milkdown/ctx@7.17.3
+  - @milkdown/prose@7.17.3
+  - @milkdown/utils@7.17.3
+
+## 7.17.2
+
+### Patch Changes
+
+- 998d472: Milkdown patch version release.
+
+  ## Feat
+  - feat: upgrade prosemirror packages versions (#2177)
+
+  ## Fix
+  - fix: 🐛 Submit button on the inline edit confirm button (#2163)
+
+- Updated dependencies [998d472]
+  - @milkdown/ctx@7.17.2
+  - @milkdown/prose@7.17.2
+  - @milkdown/utils@7.17.2
+
+## 7.17.1
+
+### Patch Changes
+
+- bf8b561: Milkdown patch version release
+
+  ## Ci
+  - ci: 🎡 release with OIDC
+
+  This version does not contain any user-facing changes.
+  We've migrated our release workflow to use OpenID Connect (OIDC) for authentication. This change enhances security by eliminating the need for long-lived personal access tokens, thereby reducing the risk of token leakage. The new setup allows GitHub Actions to securely authenticate with our package registry using short-lived tokens, ensuring a more robust and secure release process.
+
+- Updated dependencies [bf8b561]
+  - @milkdown/ctx@7.17.1
+  - @milkdown/prose@7.17.1
+  - @milkdown/utils@7.17.1
+
+## 7.17.0
+
+### Minor Changes
+
+- 4ced9da: Milkdown minor release.
+
+  ## Feat
+  - feat: 🎸 add paste rule (#2126)
+  - feat: support to render async preview in code block (#2117)
+
+### Patch Changes
+
+- Updated dependencies [4ced9da]
+  - @milkdown/ctx@7.17.0
+  - @milkdown/prose@7.17.0
+  - @milkdown/utils@7.17.0
+
+## 7.16.0
+
+### Minor Changes
+
+- 1d330d7: Milkdown minor version release.
+
+  ## Feat
+  - feat: add drop indicator plugin (#2097)
+  - feat: add new highlight plugin (#2067)
+
+  ## Fix
+  - fix: 🐛 image proxy time sequence (#2110)
+  - fix: 🐛 missing doc tag for highlight plugin
+
+  ## Chore
+  - chore: 🤖 enable knip and remove dead code and export (#2099)
+
+  ## Refactor
+  - refactor: 💡 use api from prosemirror-tables (#2083)
+
+  ## Test
+  - test: 💍 improve unit test of transformer (#2109)
+
+  ## Ci
+  - ci: 🎡 add pkg-pr-new (#2082)
+
+### Patch Changes
+
+- Updated dependencies [1d330d7]
+  - @milkdown/ctx@7.16.0
+  - @milkdown/prose@7.16.0
+  - @milkdown/utils@7.16.0
+
+## 7.15.5
+
+### Patch Changes
+
+- 331415a: Milkdown patch release version.
+
+  ## Fix
+  - fix: temporary fix for vue bug (#2075)
+
+- Updated dependencies [331415a]
+  - @milkdown/core@7.15.5
+  - @milkdown/ctx@7.15.5
+  - @milkdown/prose@7.15.5
+  - @milkdown/utils@7.15.5
+
+## 7.15.4
+
+### Patch Changes
+
+- d5057e1: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 config merge should not merge array in crepe (#2066)
+  - fix: 🐛 encode entity for trailing space (#2058)
+
+  ## Refactor
+  - refactor: 💡 improve type of clipboard plugin
+
+- Updated dependencies [d5057e1]
+  - @milkdown/core@7.15.4
+  - @milkdown/ctx@7.15.4
+  - @milkdown/prose@7.15.4
+  - @milkdown/utils@7.15.4
+
+## 7.15.3
+
+### Patch Changes
+
+- 23f6a20: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 doc mismatch when mounting doc with list item (#2048)
+
+  ## Refactor
+  - refactor: 💡 replace all lodash libraries with lodash-es (#2050)
+
+- Updated dependencies [23f6a20]
+  - @milkdown/core@7.15.3
+  - @milkdown/ctx@7.15.3
+  - @milkdown/prose@7.15.3
+  - @milkdown/utils@7.15.3
+
+## 7.15.2
+
+### Patch Changes
+
+- c8fcf84: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 list component mount logic on safari (#2042)
+  - fix: 🐛 html in blockquote error (#2041)
+  - fix: 🐛 improve input rule of strong mark (#2036)
+  - fix: 🐛 trikethrough matching on intra-word tilde (#2031)
+  - fix: 🐛 emphasis matching on intra-word underscores (#2029)
+  - fix: 🐛 copy link event binding error (#2019)
+
+  ## Refactor
+  - refactor: 💡 improve implementation of table dnd (#2017)
+
+  ## Test
+  - test: 💍 add test case for trim spaces (#2035)
+  - test: 💍 add e2e for table (#2023)
+
+- Updated dependencies [c8fcf84]
+  - @milkdown/core@7.15.2
+  - @milkdown/ctx@7.15.2
+  - @milkdown/prose@7.15.2
+  - @milkdown/utils@7.15.2
+
+## 7.15.1
+
+### Patch Changes
+
+- 547cb65: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 CJK heading id (#2012)
+  - fix: 🐛 prop copyIcon type error (#2010)
+
+- Updated dependencies [547cb65]
+  - @milkdown/core@7.15.1
+  - @milkdown/ctx@7.15.1
+  - @milkdown/prose@7.15.1
+  - @milkdown/utils@7.15.1
+
+## 7.15.0
+
+### Minor Changes
+
+- 941d1ba: Milkdown minor release.
+
+  ## Feat
+  - feat: 🎸 support extend a extended schema (#2001)
+  - feat: 🎸 reduce link preview delay
+  - feat: 🎸 new keymap manager (#1988)
+  - feat: 🎸 support copy to clipboard for code block (#1944)
+
+  ## Fix
+  - fix: 🐛 emoji crash if not available in twemoji (#1999)
+  - fix: 🐛 table shortcut priority (#1998)
+  - fix: 🐛 should hide placeholder in readonly mode (#1994)
+  - fix: 🐛 vue test warning (#1979)
+  - fix: 🐛 flaky unit test
+
+  ## Docs
+  - docs: ✏️ update documentations for components (#2003)
+
+### Patch Changes
+
+- Updated dependencies [941d1ba]
+  - @milkdown/core@7.15.0
+  - @milkdown/ctx@7.15.0
+  - @milkdown/prose@7.15.0
+  - @milkdown/utils@7.15.0
+
+## 7.14.0
+
+### Minor Changes
+
+- 98178f3: Milkdown minor release.
+
+  ## Feat
+  - feat: 🎸 add some useful macros (#1975)
+  - feat: 🎸 expose block handle config for crepe (#1974)
+
+  ## Ci
+  - ci: 🎡 fix flaky test
+
+### Patch Changes
+
+- Updated dependencies [98178f3]
+  - @milkdown/core@7.14.0
+  - @milkdown/ctx@7.14.0
+  - @milkdown/prose@7.14.0
+  - @milkdown/utils@7.14.0
+
+## 7.13.2
+
+### Patch Changes
+
+- 7c7de47: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 overflow codemirror scroll to top (#1967)
+  - fix: 🐛 polynomial-redos (#1965)
+  - fix: 🐛 debounce and throttle not call as expected (#1961)
+
+  ## Chore
+  - chore: bump up oxlint version to v1 (#1962)
+
+  ## Ci
+  - ci: 🎡 enable codeql
+  - ci: 🎡 fix flaky vitest (#1960)
+
+- Updated dependencies [7c7de47]
+  - @milkdown/core@7.13.2
+  - @milkdown/ctx@7.13.2
+  - @milkdown/prose@7.13.2
+  - @milkdown/utils@7.13.2
+
+## 7.13.1
+
+### Patch Changes
+
+- 35c3a33: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 blockConfig not found error (#1958)
+
+- Updated dependencies [35c3a33]
+  - @milkdown/core@7.13.1
+  - @milkdown/ctx@7.13.1
+  - @milkdown/prose@7.13.1
+  - @milkdown/utils@7.13.1
+
+## 7.13.0
+
+### Minor Changes
+
+- 327e89a: Milkdown minor release.
+
+  ## Feat
+  - feat: 🎸 improve the block menu config api (#1953)
+  - feat: 🎸 add commands to update block and range (#1952)
+  - feat: 🎸 expose builder in toolbar config (#1950)
+  - feat: 🎸 add selected command (#1947)
+  - feat: 🎸 add toggle link command (#1946)
+  - feat: 🎸 add latex toggle command (#1945)
+
+  ## Docs
+  - docs: ✏️ update readme
+
+  ## Refactor
+  - refactor: 💡 use group builder to build toolbar (#1949)
+
+  ## Test
+  - test: 💍 fix flaky e2e
+
+  ## Ci
+  - ci: 🎡 wrong playwright test result path
+
+### Patch Changes
+
+- Updated dependencies [327e89a]
+  - @milkdown/core@7.13.0
+  - @milkdown/ctx@7.13.0
+  - @milkdown/prose@7.13.0
+  - @milkdown/utils@7.13.0
+
+## 7.12.1
+
+### Patch Changes
+
+- 9767b9b: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 crepe rollup wrong config
+
+- Updated dependencies [9767b9b]
+  - @milkdown/core@7.12.1
+  - @milkdown/ctx@7.12.1
+  - @milkdown/prose@7.12.1
+  - @milkdown/utils@7.12.1
+
+## 7.12.0
+
+### Minor Changes
+
+- 9cb2a8b: Milkdown minor version release.
+
+  ## Feat
+  - feat: 🎸 support crepe builder (#1926, #1928)
+
+  ## Fix
+  - fix: 🐛 should focus editor when clicking todo list (#1929)
+
+  ## Chore
+  - chore: add vercel oss program badge in readme
+
+  ## Refactor
+  - refactor: 💡 use string instead of function for icons (#1927)
+
+### Patch Changes
+
+- Updated dependencies [9cb2a8b]
+  - @milkdown/core@7.12.0
+  - @milkdown/ctx@7.12.0
+  - @milkdown/prose@7.12.0
+  - @milkdown/utils@7.12.0
+
+## 7.11.1
+
+### Patch Changes
+
+- 395425b: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 missing style for codemirror search panel (#1910)
+  - fix: 🐛 should also export crepe reset css (#1909)
+
+  ## Docs
+  - docs: ✏️ add api reference for crepe editor (#1908)
+
+- Updated dependencies [395425b]
+  - @milkdown/core@7.11.1
+  - @milkdown/ctx@7.11.1
+  - @milkdown/prose@7.11.1
+  - @milkdown/utils@7.11.1
+
+## 7.11.0
+
+### Minor Changes
+
+- f890c3e: Milkdown minor version release.
+
+  ## Feat
+  - feat: 🎸 add inline support for insert macro (#1901)
+  - feat: add selection change event in listern plugin (#1900)
+
+  ## Fix
+  - fix: 🐛 slashMenuTextLabel config attribute (#1904)
+  - fix: possible empty code language attribute (#1898)
+
+### Patch Changes
+
+- Updated dependencies [f890c3e]
+  - @milkdown/core@7.11.0
+  - @milkdown/ctx@7.11.0
+  - @milkdown/prose@7.11.0
+  - @milkdown/utils@7.11.0
+
+## 7.10.5
+
+### Patch Changes
+
+- ba00e24: Milkdown patch version release.
+
+  ## Docs
+  - docs: add deep wiki link in readme
+
+  ## Fix
+  - fix: 🐛 set readonly mode before editor loaded will cause error (#1890)
+
+  ## Refactor
+  - refactor: 💡 use clipboard serialized from prosemirror (#1890)
+
+- Updated dependencies [ba00e24]
+  - @milkdown/core@7.10.5
+  - @milkdown/ctx@7.10.5
+  - @milkdown/prose@7.10.5
+  - @milkdown/utils@7.10.5
+
+## 7.10.4
+
+### Patch Changes
+
+- bf55842: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 readonly mode for code block component (#1886)
+  - fix: 🐛 check max valid position when updating slash menu (#1885)
+
+- Updated dependencies [bf55842]
+  - @milkdown/core@7.10.4
+  - @milkdown/ctx@7.10.4
+  - @milkdown/prose@7.10.4
+  - @milkdown/utils@7.10.4
+
+## 7.10.3
+
+### Patch Changes
+
+- 36f9673: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 should hide toolbar when link tooltip is shown (#1871)
+  - fix: 🐛 nord theme in nuxt (#1869)
+
+- Updated dependencies [36f9673]
+  - @milkdown/core@7.10.3
+  - @milkdown/ctx@7.10.3
+  - @milkdown/prose@7.10.3
+  - @milkdown/utils@7.10.3
+
+## 7.10.2
+
+### Patch Changes
+
+- 231c534: Milkdown patch version release.
+
+  ## Fix
+  - fix: 🐛 slash menu icon style (#1862)
+  - fix: 🐛 crepe slash menu and toolbar z-index (#1864)
+
+  ## Chore
+  - chore: improve comments
+
+  ## Docs
+  - docs: ✏️ add api docs folder (#1860)
+
+- Updated dependencies [231c534]
+  - @milkdown/core@7.10.2
+  - @milkdown/ctx@7.10.2
+  - @milkdown/prose@7.10.2
+  - @milkdown/utils@7.10.2
+
+## 7.10.1
+
+### Patch Changes
+
+- 02a756a: Milkdown patch version release.
+
+  ## Fix
+  - fix: missing command chain tsdoc (#1857)
+
+- Updated dependencies [02a756a]
+  - @milkdown/core@7.10.1
+  - @milkdown/ctx@7.10.1
+  - @milkdown/prose@7.10.1
+  - @milkdown/utils@7.10.1
+
+## 7.10.0
+
+### Minor Changes
+
+- 3296822: Milkdown minor version release.
+
+  ## Feat
+  - feat: 🎸 add command inline and chain (#1852)
+
+  ## Fix
+  - fix: 🐛 list item component should be focused when created (#1854)
+
+### Patch Changes
+
+- Updated dependencies [3296822]
+  - @milkdown/core@7.10.0
+  - @milkdown/ctx@7.10.0
+  - @milkdown/prose@7.10.0
+  - @milkdown/utils@7.10.0
+
+## 7.9.1
+
+### Patch Changes
+
+- fa3be68: Milkdown patch version release.
+
+  ## Fix
+  - fix: empty table row (#1849)
+  - fix: empty line in list (#1848)
+
+  ## Chore
+  - chore: cleanup unused dependencies (#1846)
+  - chore: bump up vite version to v6.3.4 [SECURITY] (#1844)
+  - chore: bump up pnpm to v10.10.0 (#1837)
+
+  ## Docs
+  - docs: update jetbrains brand links in readme (#1840)
+
+- Updated dependencies [fa3be68]
+  - @milkdown/core@7.9.1
+  - @milkdown/ctx@7.9.1
+  - @milkdown/prose@7.9.1
+  - @milkdown/utils@7.9.1
+
+## 7.9.0
+
+### Minor Changes
+
+- dc7f7ae: Milkdown minor release.
+
+  ## Feat
+  - feat: 🎸 enable floating-ui's shift plugin for tooltip by default (#1800), thanks to @KBHertzog.
+
+  ### Security
+  - feat: 🎸 santinize url input (#1808)
+  - feat: 🎸 add validate props for schema (#1810)
+
+  ### Vue Migration
+
+  If you have a custom stylesheet, you'll need to change the selectors from `milkdown-xxx` to `.milkdown-xxx` because we don't use webcomponents anymore.
+
+  Here's a list of all the class-based selectors currently in use that you should use instead of web components:
+
+  - `.milkdown-code-block` - For code blocks
+  - `.milkdown-image-block` - For image blocks
+  - `.milkdown-image-inline` - For inline images
+  - `.milkdown-block-handle` - For block handles
+  - `.milkdown-slash-menu` - For slash commands menu
+  - `.milkdown-toolbar` - For the editor toolbar
+  - `.milkdown-link-preview` - For link previews
+  - `.milkdown-link-edit` - For link editing
+  - `.milkdown-latex-inline-edit` - For LaTeX editing
+  - `.milkdown-table-block` - For tables
+  - `.milkdown-list-item-block` - For list items
+  - feat: 🎸 migrate toolbar to vue (#1827)
+  - feat: 🎸 migrate latex to vue (#1826)
+  - feat: 🎸 migrate slash menu to vue (#1825)
+  - feat: 🎸 migrate drag handle component to vue (#1824)
+  - feat: 🎸 migrate table component to vue (#1821)
+  - feat: 🎸 migrate list item component to vue (#1820)
+  - feat: 🎸 migrate link tooltip to vue (#1807)
+  - feat: 🎸 migrate code block to vue (#1806)
+  - feat: 🎸 migrate image inline to vue (#1804)
+  - feat: 🎸 migrate image block to vue (#1803)
+
+  ### Dev
+  - feat: 🎸 workspace generator (#1795)
+
+  ## Fix
+  - fix: 🐛 missing table component cleanup (#1823)
+  - fix: 🐛 crepe list item cursor style
+  - fix: 🐛 crepe vue unmount error (#1818)
+  - fix: 🐛 preserve empty line exception and behavior (#1814)
+
+  ## Chore
+  - chore: 🤖 migrate playground to vue (#1828)
+  - chore: 🤖 bring back build scripts (#1822)
+  - chore: 🤖 bump up prosemirror tables version
+  - chore: 🤖 rollup jsx files (#1819)
+  - chore: 🤖 bump up pnpm to v10.8.1 (#1815)
+  - chore: 🤖 bump up vite version to v6.2.6 [SECURITY] (#1802)
+  - chore: 🤖 fix publish
+  - chore: 🤖 remove nx (#1794)
+  - chore: 🤖 remove packges level dev pack (#1790)
+  - chore: 🤖 update prettier config
+  - chore: 🤖 fix workspace version
+  - chore: 🤖 optimize build script (#1788)
+
+  ## Ci
+  - ci: 🎡 add codegen in fix ci (#1805)
+  - ci: 🎡 add eslint to lint errors not supported by oxlint (#1812)
+
+### Patch Changes
+
+- Updated dependencies [dc7f7ae]
+  - @milkdown/core@7.9.0
+  - @milkdown/ctx@7.9.0
+  - @milkdown/prose@7.9.0
+  - @milkdown/utils@7.9.0
+
+## 7.8.0
+
+### Minor Changes
+
+- eeb7c58: Milkdown minor version release.
+
+  ## Feat
+  - feat: 🎸 add bike-style virtual cursor (#1770)
+
+  ## Fix
+  - fix: crepe inline code padding
+  - fix: 🐛 google doc paste (#1773)
+  - fix: 🐛 should not display slash menu if has following chars (#1772)
+  - fix: remove inline code mark inclusive config (#1771)
+
+  ## Chore
+  - chore: remove deprecated diagram package (#1786)
+
+### Patch Changes
+
+- Updated dependencies [eeb7c58]
+  - @milkdown/utils@7.8.0
+
 ## 7.7.0
 
 ### Minor Changes
@@ -7,21 +999,17 @@
 - 58e628c: Milkdown minor release.
 
   ## Feat
-
   - feat: add preserve empty line plugin (#1765)
   - feat: check for isImageBlockEnabled and isTableEnabled (#1761)
 
   ## Fix
-
   - fix: 🐛 backward select text in table cell (#1766)
   - fix: table enter and minimal rows (#1738)
 
   ## Chore
-
   - chore: update readme
 
   ## Style
-
   - style: 💄 enable more oxlint rules (#1767)
 
 ### Patch Changes
@@ -36,19 +1024,16 @@
 - fbd3cf7: Milkdown patch version release.
 
   ## Fix
-
   - fix: multi block handle (#1731)
   - fix: should not support blockquote in list (#1730)
   - fix: image upload button stop working when selected (#1718)
   - fix: should disable image resizer for readonly mode (#1717)
 
   ## Chore
-
   - chore: bump up refractor version to v5 (#1727)
   - chore: bump up shiki version to v3 (#1691)
 
   ## Build
-
   - build: disable minification #1709 (#1710)
 
 - Updated dependencies [fbd3cf7]
@@ -61,18 +1046,15 @@
 - 288bbed: Release milkdown patch version.
 
   ## Feat
-
   - feat: add math in slash menu (#1686)
   - feat: 🎸 add root option for tooltip,slash,block (#1681)
 
   ## Fix
-
   - fix: remove slugify for performance consideration (#1680)
   - fix: react and vue destroy when using crepe (#1679)
   - fix: allow running in insecure context (#1666)
 
   ## Chore
-
   - chore: Lock file maintenance (#1685)
   - chore: bump up pnpm to v10.4.1 (#1684)
   - chore: bump up all non-major dependencies to v20.4.4 (#1678)
@@ -100,17 +1082,14 @@
 - 061f740: Release milkdown patch version.
 
   ## Feat
-
   - feat: make integrations accept crepe editor (#1649)
   - feat: add crepe ctx to make users can access crepe from editor (#1648)
 
   ## Fix
-
   - fix: 🐛 incompatibility between Promise.resolve and angular change detection mechanism (#1647)
   - fix: 🐛 remark transform error when no code block lang (#1642)
 
   ## Chore
-
   - chore: bump up tailwindcss version to v4 (#1638)
   - chore: bump up all non-major dependencies to v20.4.0 (#1646)
   - chore: Lock file maintenance (#1645)
@@ -137,13 +1116,11 @@
 - 9421082: Minor version release for milkdown.
 
   ## Feat
-
   - feat: 🎸 add `on` api for crepe (#1622)
   - feat: add markdown inspector in storybook (#1619)
   - feat: add latex feature for crepe (#1613)
 
   ## Chore
-
   - chore: use kit in integrations (#1626)
   - chore: bump prosemirror versions (#1621)
   - chore: remove math plugin since we provides latex in crepe (#1617)
@@ -169,7 +1146,6 @@
 - db4ec60: Bug fixes and api improvements.
 
   # Crepe
-
   - Add image proxy config.
   - Fix link preview text not properly truncated.
   - Fix list item unstable selection.
@@ -177,7 +1153,6 @@
   - Reset index when slash menu out of bound.
 
   # Core
-
   - Prevent duplicate ids in the editor.
   - Allow options to floating ui.
   - Add undoable input rules.
@@ -190,7 +1165,6 @@
 ### Minor Changes
 
 - be28e7b: All in one kit package and crepe config.
-
   - Add all-in-one kit package.
   - Add crepe config for:
     - Widgets texts
@@ -213,14 +1187,12 @@
   ### Feature
 
   #### Migrate from tippy to floating ui
-
   - feat: replace tippy with floating ui in plugin block in https://github.com/Milkdown/milkdown/pull/1356
   - feat: migrate tippy to floating ui in plugin slash in https://github.com/Milkdown/milkdown/pull/1375
   - feat: add offset for floating ui in https://github.com/Milkdown/milkdown/pull/1384
   - feat: migrate to floating ui in plugin tooltip in https://github.com/Milkdown/milkdown/pull/1373
 
   #### Components Improvements
-
   - feat: optimize code block behavior in https://github.com/Milkdown/milkdown/pull/1388
   - fix: image caption bug in https://github.com/Milkdown/milkdown/pull/1382
   - fix: list item block should respect readonly mode in https://github.com/Milkdown/milkdown/pull/1339
@@ -229,7 +1201,6 @@
   - fix: slash menu scroll behavior in https://github.com/Milkdown/milkdown/pull/1386
 
   #### Crepe Improvements
-
   - feat: add better readonly support for crepe in https://github.com/Milkdown/milkdown/pull/1322
   - feat: add components in storybook in https://github.com/Milkdown/milkdown/pull/1323
   - fix: crepe destroy throw an error in https://github.com/Milkdown/milkdown/pull/1305
@@ -240,7 +1211,6 @@
   - feat: migrate crepe theme to pure css in https://github.com/Milkdown/milkdown/pull/1358
 
   #### Misc
-
   - docs: update default config reference by @emmanuel-ferdman in https://github.com/Milkdown/milkdown/pull/1320
   - chore: remove copyright in https://github.com/Milkdown/milkdown/pull/1321
   - test: add list item block in stories in https://github.com/Milkdown/milkdown/pull/1338
@@ -470,7 +1440,6 @@
 ### Major Changes
 
 - 069d719b: Milkdown v7.
-
   - The editor becomes a first-class headless component.
   - Factory plugins are deprecated and replaced by composable plugins.
   - Runtime plugin toggle.

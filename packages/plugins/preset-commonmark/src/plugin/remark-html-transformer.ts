@@ -1,6 +1,9 @@
-import { $remark } from '@milkdown/utils'
 import type { Node } from '@milkdown/transformer'
-import { withMeta } from '../__internal__'
+
+import { $remark } from '@milkdown/utils'
+
+import { cloneLeaf, withMeta } from '../__internal__'
+import { getBlockContainerTypes } from './block-container-types'
 
 const isParent = (node: Node): node is Node & { children: Node[] } =>
   !!(node as Node & { children: Node[] }).children
@@ -37,15 +40,19 @@ function flatMapWithDepth(
 }
 
 /// @internal
-/// This plugin should be deprecated after we support HTML.
+/// This plugin becomes obsolete once the preset supports HTML.
 export const remarkHtmlTransformer = $remark(
   'remarkHTMLTransformer',
-  () => () => (tree: Node) => {
+  (ctx) => () => (tree: Node) => {
+    // Read per run so containers registered after setup are picked up.
+    const containers = getBlockContainerTypes(ctx)
     flatMapWithDepth(tree, (node, _index, parent) => {
       if (!isHTML(node)) return [node]
 
-      if (parent?.type === 'root') {
-        node.children = [{ ...node }]
+      // If the parent is a block container that expects block content,
+      // wrap the HTML in a paragraph node
+      if (parent && containers.has(parent.type)) {
+        node.children = [cloneLeaf(node)]
         delete node.value
         ;(node as { type: string }).type = 'paragraph'
       }

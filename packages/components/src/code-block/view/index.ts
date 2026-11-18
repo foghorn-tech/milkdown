@@ -1,21 +1,29 @@
-import { $view } from '@milkdown/utils'
-import { codeBlockSchema } from '@milkdown/preset-commonmark'
 import type { NodeViewConstructor } from '@milkdown/prose/view'
-import { codeBlockConfig } from '../config'
-import { withMeta } from '../../__internal__/meta'
-import { defIfNotExists } from '../../__internal__/helper'
-import { CodeMirrorBlock } from './node-view'
-import { LanguageLoader } from './loader'
-import { CodeElement } from './component'
 
-defIfNotExists('milkdown-code-block', CodeElement)
+import { codeBlockSchema } from '@milkdown/preset-commonmark'
+import { $view } from '@milkdown/utils'
+
+import { withMeta } from '../../__internal__/meta'
+import { codeBlockConfig } from '../config'
+import { LanguageLoader } from './loader'
+import { CodeMirrorBlock } from './node-view'
+
+export { CodeMirrorBlock }
+
 export const codeBlockView = $view(
   codeBlockSchema.node,
   (ctx): NodeViewConstructor => {
-    const config = ctx.get(codeBlockConfig.key)
-    const languageLoader = new LanguageLoader(config.languages)
+    const configSlice = ctx.use(codeBlockConfig.key)
+    const languageLoader = new LanguageLoader(configSlice.get().languages)
     return (node, view, getPos) =>
-      new CodeMirrorBlock(node, view, getPos, languageLoader, config)
+      new CodeMirrorBlock(
+        node,
+        view,
+        getPos,
+        languageLoader,
+        configSlice.get(),
+        (watcher) => configSlice.on(watcher)
+      )
   }
 )
 

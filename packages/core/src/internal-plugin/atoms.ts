@@ -1,18 +1,21 @@
-import { createSlice } from '@milkdown/ctx'
+import type { SliceType, TimerType } from '@milkdown/ctx'
+import type { InputRule } from '@milkdown/prose/inputrules'
 import type { EditorState, Plugin } from '@milkdown/prose/state'
 import type {
   EditorView,
   MarkViewConstructor,
   NodeViewConstructor,
 } from '@milkdown/prose/view'
-import type { SliceType, TimerType } from '@milkdown/ctx'
-import type { InputRule } from '@milkdown/prose/inputrules'
 import type { RemarkParser, RemarkPlugin } from '@milkdown/transformer'
-import remarkParse from 'remark-parse'
 import type { Options } from 'remark-stringify'
+
+import { createSlice } from '@milkdown/ctx'
+import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
 import { unified } from 'unified'
+
 import type { Editor } from '../editor'
+
 import { remarkHandlers } from '../__internal__'
 
 /// A slice which contains the editor view instance.
@@ -21,8 +24,8 @@ export const editorViewCtx = createSlice({} as EditorView, 'editorView')
 /// A slice which contains the editor state.
 export const editorStateCtx = createSlice({} as EditorState, 'editorState')
 
-/// A slice which stores timers that need to be waited for before starting to run the plugin.
-/// By default, it's `[ConfigReady]`.
+/// A slice that holds the timers to wait for before the plugin
+/// runs. It defaults to `[ConfigReady]`.
 export const initTimerCtx = createSlice([] as TimerType[], 'initTimer')
 
 /// A slice which stores the editor instance.
@@ -60,6 +63,7 @@ export const remarkCtx: SliceType<RemarkParser, 'remark'> = createSlice(
 export const remarkStringifyOptionsCtx = createSlice(
   {
     handlers: remarkHandlers,
+    encode: [],
   } as Options,
   'remarkStringifyOptions'
 )

@@ -2,9 +2,11 @@ import { expectDomTypeError } from '@milkdown/exception'
 import { listItemSchema } from '@milkdown/preset-commonmark'
 import { InputRule } from '@milkdown/prose/inputrules'
 import { $inputRule } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
-/// This schema extends the [list item](/preset-commonmark#list-item) schema and add task list support for it.
+/// This schema extends the [list item](/preset-commonmark#list-item)
+/// schema and adds task list support to it.
 export const extendListItemSchemaForTask = listItemSchema.extendSchema(
   (prev) => {
     return (ctx) => {
@@ -15,6 +17,7 @@ export const extendListItemSchemaForTask = listItemSchema.extendSchema(
           ...baseSchema.attrs,
           checked: {
             default: null,
+            validate: 'boolean|null',
           },
         },
         parseDOM: [
@@ -26,7 +29,7 @@ export const extendListItemSchemaForTask = listItemSchema.extendSchema(
               return {
                 label: dom.dataset.label,
                 listType: dom.dataset.listType,
-                spread: dom.dataset.spread,
+                spread: dom.dataset.spread === 'true',
                 checked: dom.dataset.checked
                   ? dom.dataset.checked === 'true'
                   : null,
@@ -62,7 +65,7 @@ export const extendListItemSchemaForTask = listItemSchema.extendSchema(
             const label = node.label != null ? `${node.label}.` : '•'
             const checked = node.checked != null ? Boolean(node.checked) : null
             const listType = node.label != null ? 'ordered' : 'bullet'
-            const spread = node.spread != null ? `${node.spread}` : 'true'
+            const spread = node.spread ?? true
 
             state.openNode(type, { label, listType, spread, checked })
             state.next(node.children)
@@ -79,7 +82,7 @@ export const extendListItemSchemaForTask = listItemSchema.extendSchema(
 
             const label = node.attrs.label
             const listType = node.attrs.listType
-            const spread = node.attrs.spread === 'true'
+            const spread = node.attrs.spread
             const checked = node.attrs.checked
 
             state.openNode('listItem', undefined, {
@@ -97,13 +100,18 @@ export const extendListItemSchemaForTask = listItemSchema.extendSchema(
   }
 )
 
-withMeta(extendListItemSchemaForTask, {
-  displayName: 'NodeSchema<listItem>',
+withMeta(extendListItemSchemaForTask.node, {
+  displayName: 'NodeSchema<taskListItem>',
   group: 'ListItem',
 })
 
-/// Input rule for wrapping a block in task list node.
-/// Users can type `[ ] ` or `[x] ` to wrap the block in task list node with checked status.
+withMeta(extendListItemSchemaForTask.ctx, {
+  displayName: 'NodeSchemaCtx<taskListItem>',
+  group: 'ListItem',
+})
+
+/// An input rule that wraps a block in a task list node. Type `[ ] ` or
+/// `[x] ` to wrap the block and set its checked status.
 export const wrapInTaskListInputRule = $inputRule(() => {
   return new InputRule(
     /^\[(?<checked>\s|x)\]\s$/,

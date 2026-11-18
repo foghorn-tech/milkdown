@@ -2,6 +2,7 @@ import { expectDomTypeError } from '@milkdown/exception'
 import { findSelectedNodeOfType } from '@milkdown/prose'
 import { InputRule } from '@milkdown/prose/inputrules'
 import { $command, $inputRule, $nodeAttr, $nodeSchema } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for image node.
@@ -24,9 +25,9 @@ export const imageSchema = $nodeSchema('image', (ctx) => {
     defining: true,
     isolating: true,
     attrs: {
-      src: { default: '' },
-      alt: { default: '' },
-      title: { default: '' },
+      src: { default: '', validate: 'string' },
+      alt: { default: '', validate: 'string' },
+      title: { default: '', validate: 'string' },
     },
     parseDOM: [
       {
@@ -49,8 +50,11 @@ export const imageSchema = $nodeSchema('image', (ctx) => {
       match: ({ type }) => type === 'image',
       runner: (state, node, type) => {
         const url = node.url as string
-        const alt = node.alt as string
-        const title = node.title as string
+        // mdast gives null for an alt or a title that the markdown omits.
+        // Both attributes are strings, and prosemirror-model validates every
+        // attribute in NodeType.create from version 1.25.12.
+        const alt = (node.alt as string | null) ?? ''
+        const title = (node.title as string | null) ?? ''
         state.addNode(type, {
           src: url,
           alt,
@@ -112,8 +116,8 @@ withMeta(insertImageCommand, {
   group: 'Image',
 })
 
-/// This command will update the selected image node.
-/// You can pass a payload to update `src`, `alt` and `title` for the image node.
+/// This command updates the selected image node. Pass a payload to
+/// update the `src`, the `alt` and the `title` of the node.
 export const updateImageCommand = $command(
   'UpdateImage',
   (ctx) =>

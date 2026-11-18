@@ -1,8 +1,9 @@
+import type { Node } from '@milkdown/prose/model'
+
 import { commandsCtx, editorViewCtx } from '@milkdown/core'
 import { expectDomTypeError } from '@milkdown/exception'
 import { setBlockType } from '@milkdown/prose/commands'
 import { textblockTypeInputRule } from '@milkdown/prose/inputrules'
-import type { Node } from '@milkdown/prose/model'
 import {
   $command,
   $ctx,
@@ -11,6 +12,7 @@ import {
   $nodeSchema,
   $useKeymap,
 } from '@milkdown/utils'
+
 import { serializeText, withMeta } from '../__internal__'
 import { paragraphSchema } from './paragraph'
 
@@ -19,11 +21,7 @@ const headingIndex = Array(6)
   .map((_, i) => i + 1)
 
 function defaultHeadingIdGenerator(node: Node) {
-  return node.textContent
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
+  return node.textContent.toLowerCase().trim().replace(/\s+/g, '-')
 }
 
 /// This is a slice contains a function to generate heading id.
@@ -56,9 +54,11 @@ export const headingSchema = $nodeSchema('heading', (ctx) => {
     attrs: {
       id: {
         default: '',
+        validate: 'string',
       },
       level: {
         default: 1,
+        validate: 'number',
       },
     },
     parseDOM: headingIndex.map((x) => ({
@@ -155,9 +155,9 @@ withMeta(wrapInHeadingCommand, {
   group: 'Heading',
 })
 
-/// This command can downgrade the selected heading.
-/// For example, if you have a `h2` element, and you call this command, you will get a `h1` element.
-/// If the element is already a `h1` element, it will turn it into a `p` element.
+/// This command downgrades the selected heading. It turns an `h2`
+/// element into an `h1` element. It turns an `h1` element into a `p`
+/// element.
 export const downgradeHeadingCommand = $command(
   'DowngradeHeading',
   (ctx) => () => (state, dispatch, view) => {

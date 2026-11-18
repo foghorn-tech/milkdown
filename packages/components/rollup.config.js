@@ -1,9 +1,9 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import commonjs from '@rollup/plugin-commonjs'
 import json from '@rollup/plugin-json'
 import resolve from '@rollup/plugin-node-resolve'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import esbuild from 'rollup-plugin-esbuild'
 
 import pkg from './package.json' with { type: 'json' }
@@ -18,7 +18,7 @@ const main = [
   {
     input: './src/index.ts',
     output: {
-      file: 'lib/index.es.js',
+      file: 'lib/index.js',
       format: 'esm',
       sourcemap: true,
     },
@@ -40,7 +40,7 @@ function componentModule(name) {
     {
       input,
       output: {
-        file: `lib/${name}/index.es.js`,
+        file: `lib/${name}/index.js`,
         format: 'esm',
         sourcemap: true,
       },
@@ -63,6 +63,8 @@ const dirs = fs.readdirSync(path.resolve(dirname, './src'))
 
 export default () =>
   dirs
-    .filter((x) => x !== '__internal__' && !x.includes('index'))
+    .filter(
+      (x) => x !== '__internal__' && x !== '__tests__' && !x.includes('index')
+    )
     .flatMap(componentModule)
     .concat(main)

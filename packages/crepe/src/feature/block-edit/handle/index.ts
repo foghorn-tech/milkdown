@@ -1,55 +1,74 @@
-import type { PluginView } from '@milkdown/kit/prose/state'
-import { TextSelection } from '@milkdown/kit/prose/state'
-import { BlockProvider, block, blockConfig } from '@milkdown/kit/plugin/block'
 import type { Ctx } from '@milkdown/kit/ctx'
-import type { AtomicoThis } from 'atomico/types/dom'
+import type { PluginView } from '@milkdown/kit/prose/state'
+
 import { editorViewCtx } from '@milkdown/kit/core'
+import {
+  BlockProvider,
+  block,
+  blockConfig,
+  type BlockProviderOptions,
+} from '@milkdown/kit/plugin/block'
 import { paragraphSchema } from '@milkdown/kit/preset/commonmark'
 import { findParent } from '@milkdown/kit/prose'
-import { menuAPI } from '../menu'
-import { defIfNotExists } from '../../../utils'
-import type { BlockEditFeatureConfig } from '../index'
-import type { BlockHandleProps } from './component'
-import { BlockHandleElement } from './component'
+import { TextSelection } from '@milkdown/kit/prose/state'
+import { createApp, type App } from 'vue'
 
-export class BlockHandleView implements PluginView {
-  #content: AtomicoThis<BlockHandleProps>
+import type { BlockEditFeatureConfig } from '../index'
+
+import { menuIcon, plusIcon } from '../../../icons'
+import { menuAPI } from '../menu'
+import { BlockHandle } from './component'
+
+class BlockHandleView implements PluginView {
+  #content: HTMLElement
   #provider: BlockProvider
+  #app: App
   readonly #ctx: Ctx
 
   constructor(ctx: Ctx, config?: BlockEditFeatureConfig) {
     this.#ctx = ctx
-    const content = new BlockHandleElement()
+    const content = document.createElement('div')
+    content.classList.add('milkdown-block-handle')
+    const app = createApp(BlockHandle, {
+      onAdd: this.onAdd,
+      addIcon: config?.handleAddIcon ?? plusIcon,
+      handleIcon: config?.handleDragIcon ?? menuIcon,
+    })
+    app.mount(content)
+    this.#app = app
     this.#content = content
-    this.#content.onAdd = this.onAdd
-    this.#content.addIcon = config?.handleAddIcon
-    this.#content.handleIcon = config?.handleDragIcon
+    const blockProviderOptions = (config?.blockHandle ??
+      {}) as Partial<BlockProviderOptions>
     this.#provider = new BlockProvider({
       ctx,
       content,
-      getOffset: () => 16,
-      getPlacement: ({ active, blockDom }) => {
-        if (active.node.type.name === 'heading') return 'left'
+      getOffset: blockProviderOptions.getOffset ?? (() => 16),
+      getPlacement:
+        blockProviderOptions.getPlacement ??
+        (({ active, blockDom }) => {
+          if (active.node.type.name === 'heading') return 'left'
 
-        let totalDescendant = 0
-        active.node.descendants((node) => {
-          totalDescendant += node.childCount
-        })
-        const dom = active.el
-        const domRect = dom.getBoundingClientRect()
-        const handleRect = blockDom.getBoundingClientRect()
-        const style = window.getComputedStyle(dom)
-        const paddingTop = Number.parseInt(style.paddingTop, 10) || 0
-        const paddingBottom = Number.parseInt(style.paddingBottom, 10) || 0
-        const height = domRect.height - paddingTop - paddingBottom
-        const handleHeight = handleRect.height
-        return totalDescendant > 2 || handleHeight < height
-          ? 'left-start'
-          : 'left'
-      },
-      shouldShow: (view) => {
-        return view.hasFocus()
-      }
+          let totalDescendant = 0
+          active.node.descendants((node) => {
+            totalDescendant += node.childCount
+          })
+          const dom = active.el
+          const domRect = dom.getBoundingClientRect()
+          const handleRect = blockDom.getBoundingClientRect()
+          const style = window.getComputedStyle(dom)
+          const paddingTop = Number.parseInt(style.paddingTop, 10) || 0
+          const paddingBottom = Number.parseInt(style.paddingBottom, 10) || 0
+          const height = domRect.height - paddingTop - paddingBottom
+          const handleHeight = handleRect.height
+          return totalDescendant > 2 || handleHeight < height
+            ? 'left-start'
+            : 'left'
+        }),
+      shouldShow: blockProviderOptions.shouldShow,
+      getPosition: blockProviderOptions.getPosition,
+      middleware: blockProviderOptions.middleware,
+      floatingUIOptions: blockProviderOptions.floatingUIOptions,
+      root: blockProviderOptions.root,
     })
     this.update()
   }
@@ -61,6 +80,7 @@ export class BlockHandleView implements PluginView {
   destroy = () => {
     this.#provider.destroy()
     this.#content.remove()
+    this.#app.unmount()
   }
 
   onAdd = () => {
@@ -83,7 +103,6 @@ export class BlockHandleView implements PluginView {
   }
 }
 
-defIfNotExists('milkdown-block-handle', BlockHandleElement)
 export function configureBlockHandle(
   ctx: Ctx,
   config?: BlockEditFeatureConfig

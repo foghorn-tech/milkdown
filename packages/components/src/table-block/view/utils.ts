@@ -1,15 +1,14 @@
 import type { Node } from '@milkdown/prose/model'
 import type { EditorView } from '@milkdown/prose/view'
-import { findParent } from '@milkdown/prose'
-import type { Ref } from 'atomico'
-import { editorViewCtx } from '@milkdown/core'
-import { CellSelection } from '@milkdown/prose/tables'
-import { findTable } from '@milkdown/preset-gfm'
+import type { Ref } from 'vue'
+
 import { computePosition } from '@floating-ui/dom'
-import type { Ctx } from '@milkdown/ctx'
+import { findParent } from '@milkdown/prose'
+import { CellSelection, findTable } from '@milkdown/prose/tables'
+
 import type { CellIndex, Refs } from './types'
 
-export function findNodeIndex(parent: Node, child: Node) {
+function findNodeIndex(parent: Node, child: Node) {
   for (let i = 0; i < parent.childCount; i++) {
     if (parent.child(i) === child) return i
   }
@@ -57,10 +56,10 @@ export function findPointerIndex(
 }
 
 export function getRelatedDOM(
-  contentWrapperRef: Ref<HTMLDivElement>,
+  contentWrapperRef: Ref<HTMLElement | undefined>,
   [rowIndex, columnIndex]: CellIndex
 ) {
-  const content = contentWrapperRef.current
+  const content = contentWrapperRef.value
   if (!content) return
   const rows = content.querySelectorAll('tr')
   const row = rows[rowIndex]
@@ -82,10 +81,14 @@ export function getRelatedDOM(
   }
 }
 
-export function recoveryStateBetweenUpdate(refs: Refs, ctx?: Ctx, node?: Node) {
-  if (!ctx) return
+export function recoveryStateBetweenUpdate(
+  refs: Refs,
+  view?: EditorView,
+  node?: Node
+) {
   if (!node) return
-  const { selection } = ctx.get(editorViewCtx).state
+  if (!view) return
+  const { selection } = view.state
   if (!(selection instanceof CellSelection)) return
 
   const { $from } = selection
@@ -141,22 +144,24 @@ export function computeColHandlePositionByIndex({
   after,
 }: ComputeHandlePositionByIndexProps) {
   const { contentWrapperRef, colHandleRef, hoverIndex } = refs
-  const colHandle = colHandleRef.current
+  const colHandle = colHandleRef.value
   if (!colHandle) return
 
-  hoverIndex.current = index
+  hoverIndex.value = index
   const dom = getRelatedDOM(contentWrapperRef, index)
   if (!dom) return
   const { headerCol: col } = dom
   colHandle.dataset.show = 'true'
   if (before) before(colHandle)
-  computePosition(col, colHandle, { placement: 'top' }).then(({ x, y }) => {
-    Object.assign(colHandle.style, {
-      left: `${x}px`,
-      top: `${y}px`,
+  computePosition(col, colHandle, { placement: 'top' })
+    .then(({ x, y }) => {
+      Object.assign(colHandle.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      })
+      if (after) after(colHandle)
     })
-    if (after) after(colHandle)
-  })
+    .catch(console.error)
 }
 
 export function computeRowHandlePositionByIndex({
@@ -166,20 +171,22 @@ export function computeRowHandlePositionByIndex({
   after,
 }: ComputeHandlePositionByIndexProps) {
   const { contentWrapperRef, rowHandleRef, hoverIndex } = refs
-  const rowHandle = rowHandleRef.current
+  const rowHandle = rowHandleRef.value
   if (!rowHandle) return
 
-  hoverIndex.current = index
+  hoverIndex.value = index
   const dom = getRelatedDOM(contentWrapperRef, index)
   if (!dom) return
   const { row } = dom
   rowHandle.dataset.show = 'true'
   if (before) before(rowHandle)
-  computePosition(row, rowHandle, { placement: 'left' }).then(({ x, y }) => {
-    Object.assign(rowHandle.style, {
-      left: `${x}px`,
-      top: `${y}px`,
+  computePosition(row, rowHandle, { placement: 'left' })
+    .then(({ x, y }) => {
+      Object.assign(rowHandle.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      })
+      if (after) after(rowHandle)
     })
-    if (after) after(rowHandle)
-  })
+    .catch(console.error)
 }
