@@ -124,7 +124,8 @@ export const LanguagePicker = defineComponent<LanguagePickerProps>({
     })
 
     const clickHandler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
+      const target = e.composedPath()[0]
+      if (!(target instanceof Node)) return
 
       if (triggerRef.value && triggerRef.value.contains(target)) return
 
