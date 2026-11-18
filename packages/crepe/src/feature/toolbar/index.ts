@@ -22,6 +22,11 @@ export { keymapRef } from '../../utils/keyboard-shortcut'
 export type { KeymapRef } from '../../utils/keyboard-shortcut'
 export type { ToolbarItem } from './config'
 
+export interface ToolbarExtraItems {
+  dom: HTMLElement
+  update?: (view: EditorView) => void
+}
+
 interface ToolbarConfig {
   boldIcon: string
   codeIcon: string
@@ -40,6 +45,8 @@ interface ToolbarConfig {
   latexLabel: string
   aiLabel: string
   buildToolbar: (builder: GroupBuilder<ToolbarItem>) => void
+  /// Mount additional controls inside the tooltip so focus stays in the editor.
+  extraItems: (ctx: Ctx) => ToolbarExtraItems
 }
 
 export type ToolbarFeatureConfig = Partial<ToolbarConfig>
@@ -52,6 +59,7 @@ class ToolbarView implements PluginView {
   #app: App
   #selection: ShallowRef<Selection>
   #show = ref(false)
+  #extraItems?: ToolbarExtraItems
 
   constructor(ctx: Ctx, view: EditorView, config?: ToolbarFeatureConfig) {
     const content = document.createElement('div')
@@ -65,6 +73,12 @@ class ToolbarView implements PluginView {
       show: this.#show,
     })
     app.mount(content)
+    this.#extraItems = config?.extraItems?.(ctx)
+    if (this.#extraItems) {
+      const divider = document.createElement('div')
+      divider.className = 'divider'
+      content.append(divider, this.#extraItems.dom)
+    }
     this.#content = content
     this.#app = app
 
@@ -114,6 +128,7 @@ class ToolbarView implements PluginView {
   update = (view: EditorView, prevState?: EditorState) => {
     this.#tooltipProvider.update(view, prevState)
     this.#selection.value = view.state.selection
+    this.#extraItems?.update?.(view)
   }
 
   destroy = () => {

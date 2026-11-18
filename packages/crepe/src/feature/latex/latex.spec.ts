@@ -2,11 +2,14 @@ import {
   Editor,
   defaultValueCtx,
   editorViewCtx,
+  parserCtx,
   rootCtx,
+  serializerCtx,
 } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { describe, expect, test } from 'vitest'
 
+import { Crepe } from '../../core'
 import { mathInlineSchema } from './inline-latex'
 import { mathInlineRegex } from './input-rule'
 import { remarkInlineMathGuardPlugin, remarkMathPlugin } from './remark'
@@ -34,6 +37,30 @@ function hasMath(doc: Awaited<ReturnType<typeof parse>>) {
 }
 
 describe('inline math parsing', () => {
+  test('legacy math mode preserves formulas directly before digits', async () => {
+    const crepe = new Crepe({
+      defaultValue: 'Render $x$2 and $42.00$.',
+      featureConfigs: {
+        [Crepe.Feature.Latex]: { inlineMathGuard: false },
+      },
+    })
+    await crepe.create()
+    try {
+      const { ctx } = crepe.editor
+      const doc = ctx.get(editorViewCtx).state.doc
+      const values: string[] = []
+      doc.descendants((node) => {
+        if (node.type.name === 'math_inline') values.push(node.attrs.value)
+      })
+      expect(values).toEqual(['x', '42.00'])
+      expect(ctx.get(parserCtx)(ctx.get(serializerCtx)(doc))?.eq(doc)).toBe(
+        true
+      )
+    } finally {
+      await crepe.destroy()
+    }
+  })
+
   test.each([
     'Lunch was $5 and dinner $10.',
     'costs $ 5 and $ 10',

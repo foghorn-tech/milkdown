@@ -32,6 +32,14 @@ describe('latex inline tooltip', () => {
   test('should show in edit mode', async () => {
     const crepe = new Crepe({
       defaultValue: '$x$',
+      featureConfigs: {
+        [Crepe.Feature.Latex]: {
+          inlineEditHelp: {
+            href: 'https://example.test/math',
+            label: 'Math help',
+          },
+        },
+      },
     })
 
     await crepe.create()
@@ -52,6 +60,11 @@ describe('latex inline tooltip', () => {
     expect(
       document.body.querySelector('.milkdown-latex-inline-edit')
     ).toHaveAttribute('data-show', 'true')
+    const help = document.body.querySelector('.milkdown-latex-inline-edit a')
+    expect(help).toHaveTextContent('Math help')
+    expect(help).toHaveAttribute('href', 'https://example.test/math')
+    expect(help).toHaveAttribute('rel', 'noopener noreferrer')
+    await crepe.destroy()
   })
 
   test('should not show in readonly editor', async () => {

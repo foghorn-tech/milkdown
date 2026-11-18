@@ -13,7 +13,11 @@ import { toggleLatexCommand } from './command'
 import { mathInlineSchema } from './inline-latex'
 import { inlineLatexTooltip } from './inline-tooltip/tooltip'
 import { LatexInlineTooltip } from './inline-tooltip/view'
-import { mathBlockInputRule, mathInlineInputRule } from './input-rule'
+import {
+  legacyMathInlineInputRule,
+  mathBlockInputRule,
+  mathInlineInputRule,
+} from './input-rule'
 import {
   remarkInlineMathGuardPlugin,
   remarkMathBlockPlugin,
@@ -23,11 +27,15 @@ import {
 export interface LatexConfig {
   katexOptions: KatexOptions
   inlineEditConfirm: string
+  /// Allow hosts with their own currency handling to retain legacy math syntax.
+  inlineMathGuard: boolean
+  inlineEditHelp: { href: string; label: string }
 }
 
 export type LatexFeatureConfig = Partial<LatexConfig>
 
 export const latex: DefineFeature<LatexFeatureConfig> = (editor, config) => {
+  const useMathGuard = config?.inlineMathGuard !== false
   editor
     .config(crepeFeatureConfig(CrepeFeature.Latex))
     .config((ctx) => {
@@ -59,13 +67,14 @@ export const latex: DefineFeature<LatexFeatureConfig> = (editor, config) => {
     })
     .use(remarkMathPlugin)
     .use(remarkMathBlockPlugin)
-    .use(remarkInlineMathGuardPlugin)
     .use(mathInlineSchema)
     .use(inlineLatexTooltip)
-    .use(mathInlineInputRule)
+    .use(useMathGuard ? mathInlineInputRule : legacyMathInlineInputRule)
     .use(mathBlockInputRule)
     .use(blockLatexSchema)
     .use(toggleLatexCommand)
+
+  if (useMathGuard) editor.use(remarkInlineMathGuardPlugin)
 }
 
 function renderLatex(content: string, options?: KatexOptions) {

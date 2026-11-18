@@ -54,12 +54,13 @@ export const Toolbar = defineComponent<ToolbarProps>({
   setup(props) {
     const { ctx, config } = props
 
-    const onClick = (fn?: (ctx: Ctx) => void) => (e: MouseEvent) => {
-      e.preventDefault()
-      if (ctx) {
-        fn?.(ctx)
+    const runItem =
+      (item: ToolbarItem & { onRun?: (ctx: Ctx) => void }) =>
+      (e: MouseEvent) => {
+        e.preventDefault()
+        item.onRun?.(ctx)
+        if (item.hideOnRun) props.hide()
       }
-    }
 
     function checkActive(checker: ToolbarItem['active']) {
       // make sure the function subscribed to vue reactive
@@ -97,7 +98,7 @@ export const Toolbar = defineComponent<ToolbarProps>({
                     title={tooltipFor(item)}
                     aria-label={item.label}
                     aria-keyshortcuts={item.ariaKeyshortcuts}
-                    onPointerdown={onClick(item.onRun)}
+                    onPointerdown={runItem(item)}
                   >
                     <Icon icon={item.icon} />
                   </button>

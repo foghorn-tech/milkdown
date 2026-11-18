@@ -12,15 +12,19 @@ export const mathInlineRegex = /\$([^\s$](?:[^$]*[^\s$])?)\$$/
 
 /// Input rule for inline math.
 /// When you type $E=MC^2$, it will create an inline math node.
-export const mathInlineInputRule = $inputRule((ctx) =>
-  nodeRule(mathInlineRegex, mathInlineSchema.type(ctx), {
-    getAttr: (match) => {
-      return {
-        value: match[1] ?? '',
-      }
-    },
-  })
-)
+const inlineInputRule = (regex: RegExp) =>
+  $inputRule((ctx) =>
+    nodeRule(regex, mathInlineSchema.type(ctx), {
+      getAttr: (match) => {
+        return {
+          value: match[1] ?? '',
+        }
+      },
+    })
+  )
+
+export const mathInlineInputRule = inlineInputRule(mathInlineRegex)
+export const legacyMathInlineInputRule = inlineInputRule(/\$([^$]+)\$$/)
 
 /// A input rule for creating block math.
 /// For example, `$$ ` will create a code block with language javascript.

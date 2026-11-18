@@ -1,13 +1,19 @@
 import type { EditorView } from '@milkdown/kit/prose/view'
 
 import { Icon } from '@milkdown/kit/component'
-import { defineComponent, type ShallowRef, type VNodeRef, h } from 'vue'
+import {
+  defineComponent,
+  type ShallowRef,
+  type VNodeRef,
+  h,
+  Fragment,
+} from 'vue'
 
 import type { LatexConfig } from '..'
 
 import { keepAlive } from '../../../utils/keep-alive'
 
-keepAlive(h)
+keepAlive(h, Fragment)
 
 type LatexTooltipProps = {
   config: Partial<LatexConfig>
@@ -47,12 +53,23 @@ export const LatexTooltip = defineComponent<LatexTooltipProps>({
 
     return () => {
       return (
-        <div class="container">
-          {props.innerView.value && <div ref={innerViewRef} />}
-          <button type="button" onPointerdown={onUpdate}>
-            <Icon icon={props.config.inlineEditConfirm} />
-          </button>
-        </div>
+        <>
+          <div class="container">
+            {props.innerView.value && <div ref={innerViewRef} />}
+            <button type="button" onPointerdown={onUpdate}>
+              <Icon icon={props.config.inlineEditConfirm} />
+            </button>
+          </div>
+          {props.config.inlineEditHelp && (
+            <a
+              href={props.config.inlineEditHelp.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {props.config.inlineEditHelp.label}
+            </a>
+          )}
+        </>
       )
     }
   },

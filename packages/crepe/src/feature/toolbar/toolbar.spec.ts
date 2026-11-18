@@ -1,5 +1,7 @@
+import { editorViewCtx } from '@milkdown/kit/core'
 import { strongKeymap } from '@milkdown/kit/preset/commonmark'
 import { browser } from '@milkdown/kit/prose'
+import { TextSelection } from '@milkdown/kit/prose/state'
 import { $useKeymap } from '@milkdown/kit/utils'
 import { test, expect, describe } from 'vitest'
 
@@ -9,6 +11,44 @@ import { Crepe } from '../../core'
 import { CrepeFeature } from '../../feature'
 import { formatKeymapShortcut, keymapRef } from '../../utils/keyboard-shortcut'
 import { getGroups } from './config'
+
+test('mounts and updates the host controls in the toolbar for each editor', async () => {
+  const root = document.createElement('div')
+  document.body.append(root)
+  const control = document.createElement('button')
+  const crepe = new Crepe({
+    root,
+    defaultValue: 'Example',
+    featureConfigs: {
+      [Crepe.Feature.Toolbar]: {
+        extraItems: () => ({
+          dom: control,
+          update: ({ state }) => {
+            control.textContent = state.doc.textBetween(
+              state.selection.from,
+              state.selection.to
+            )
+          },
+        }),
+      },
+    },
+  })
+  await crepe.create()
+  try {
+    const view = crepe.editor.ctx.get(editorViewCtx)
+    view.dispatch(
+      view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 4))
+    )
+    expect(root.querySelector('.milkdown-toolbar > button:last-child')).toBe(
+      control
+    )
+    expect(control.textContent).toBe('Exa')
+  } finally {
+    await crepe.destroy()
+    expect(root.contains(control)).toBe(false)
+    root.remove()
+  }
+})
 
 /// The shortcut strings a built-in should carry, computed the same way the
 /// resolver does so assertions hold on whatever platform the tests run on.

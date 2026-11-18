@@ -45,6 +45,8 @@ import { mathInlineId, toggleLatexCommandName } from '../latex/constants'
 export type ToolbarItem = {
   active: (ctx: Ctx) => boolean
   icon: string
+  /// Dismiss the toolbar after a command that opens another control.
+  hideOnRun?: boolean
   /// Accessible name for the button, rendered as `title` and
   /// `aria-label`. Without it the button exposes no name, because its
   /// only content is an SVG.
