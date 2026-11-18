@@ -6,9 +6,11 @@ node_modules
 lib
 dist
 dist-ssr
-docs
 coverage
 test-results
+blob-report
+all-blob-reports
+playwright-report
 .pnpm-store
 .npmrc
 tsconfig.tsbuildinfo
@@ -18,13 +20,13 @@ e2e/cypress/downloads
 
 sitemap.xml
 
+.eslintcache
+
 .env
-nx-cloud.env
 *.local
 *.cache
 *error.log
 *debug.log
 
-.nx
-
 storybook-static
+.playwright-mcp

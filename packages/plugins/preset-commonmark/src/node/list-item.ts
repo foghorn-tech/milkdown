@@ -1,13 +1,16 @@
+import type { Ctx } from '@milkdown/ctx'
+
 import { commandsCtx } from '@milkdown/core'
 import { expectDomTypeError } from '@milkdown/exception'
+import { joinBackward } from '@milkdown/prose/commands'
 import {
   liftListItem,
   sinkListItem,
   splitListItem,
 } from '@milkdown/prose/schema-list'
-import { $command, $nodeAttr, $nodeSchema, $useKeymap } from '@milkdown/utils'
 import { type Command, TextSelection } from '@milkdown/prose/state'
-import type { Ctx } from '@milkdown/ctx'
+import { $command, $nodeAttr, $nodeSchema, $useKeymap } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for list item node.
@@ -25,12 +28,15 @@ export const listItemSchema = $nodeSchema('list_item', (ctx) => ({
   attrs: {
     label: {
       default: '•',
+      validate: 'string',
     },
     listType: {
       default: 'bullet',
+      validate: 'string',
     },
     spread: {
-      default: 'true',
+      default: true,
+      validate: 'boolean',
     },
   },
   defining: true,
@@ -43,7 +49,7 @@ export const listItemSchema = $nodeSchema('list_item', (ctx) => ({
         return {
           label: dom.dataset.label,
           listType: dom.dataset.listType,
-          spread: dom.dataset.spread,
+          spread: dom.dataset.spread === 'true',
         }
       },
     },
@@ -63,7 +69,7 @@ export const listItemSchema = $nodeSchema('list_item', (ctx) => ({
     runner: (state, node, type) => {
       const label = node.label != null ? `${node.label}.` : '•'
       const listType = node.label != null ? 'ordered' : 'bullet'
-      const spread = node.spread != null ? `${node.spread}` : 'true'
+      const spread = node.spread ?? true
       state.openNode(type, { label, listType, spread })
       state.next(node.children)
       state.closeNode()
@@ -73,7 +79,7 @@ export const listItemSchema = $nodeSchema('list_item', (ctx) => ({
     match: (node) => node.type.name === 'list_item',
     runner: (state, node) => {
       state.openNode('listItem', undefined, {
-        spread: node.attrs.spread === 'true',
+        spread: node.attrs.spread,
       })
       state.next(node.content)
       state.closeNode()
@@ -150,7 +156,30 @@ withMeta(liftListItemCommand, {
 /// ```
 export const splitListItemCommand = $command(
   'SplitListItem',
-  (ctx) => () => splitListItem(listItemSchema.type(ctx))
+  (ctx) => () => (state, dispatch, view) =>
+    splitListItem(listItemSchema.type(ctx))(
+      state,
+      dispatch &&
+        ((tr) => {
+          const { $from } = state.selection
+          // In an empty last block, `splitListItem` splits the wrapping
+          // item but gives the new item default attrs. Copy the attrs of
+          // the wrapping item, as a split of a non-empty item does.
+          if (
+            $from.parent.content.size === 0 &&
+            $from.node(-1).childCount === $from.indexAfter(-1)
+          ) {
+            const { $from: $cursor } = tr.selection
+            tr.setNodeMarkup(
+              $cursor.before(-1),
+              undefined,
+              $from.node(-3).attrs
+            )
+          }
+          dispatch(tr)
+        }),
+      view
+    )
 )
 
 withMeta(splitListItemCommand, {
@@ -169,18 +198,9 @@ function liftFirstListItem(ctx: Ctx): Command {
     if (!empty || $from.parentOffset !== 0) return false
 
     const parentItem = $from.node(-1)
-    // selection should be in list item and list item should be the first child of the list
-    if (
-      parentItem.type !== listItemSchema.type(ctx) ||
-      parentItem.firstChild !== $from.node()
-    )
-      return false
+    if (parentItem.type !== listItemSchema.type(ctx)) return false
 
-    const list = $from.node(-2)
-    // list should have only one list item
-    if (list.childCount > 1) return false
-
-    return liftListItem(listItemSchema.type(ctx))(state, dispatch, view)
+    return joinBackward(state, dispatch, view)
   }
 }
 

@@ -1,19 +1,21 @@
+import type {
+  ComputePositionConfig,
+  Middleware,
+  OffsetOptions,
+  Placement,
+  VirtualElement,
+} from '@floating-ui/dom'
 import type { Ctx } from '@milkdown/ctx'
 import type { EditorState } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
 
-import type {
-  ComputePositionConfig,
-  Middleware,
-  Placement,
-  VirtualElement,
-} from '@floating-ui/dom'
 import { computePosition, flip, offset } from '@floating-ui/dom'
-
 import { editorViewCtx } from '@milkdown/core'
+
 import type { BlockService } from './block-service'
-import { blockServiceInstance } from './block-plugin'
 import type { ActiveNode } from './types'
+
+import { blockServiceInstance } from './block-plugin'
 
 /// The context of the block provider.
 export interface DeriveContext {
@@ -32,20 +34,17 @@ export interface BlockProviderOptions {
   /// The function to determine whether the tooltip should be shown.
   shouldShow?: (view: EditorView, prevState?: EditorState) => boolean
   /// The offset to get the block. Default is 0.
-  getOffset?: (deriveContext: DeriveContext) =>
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
-  /// The function to get the position of the block. Default is the position of the active node.
+  getOffset?: (deriveContext: DeriveContext) => OffsetOptions
+  /// The function that returns the position of the block. It defaults to
+  /// the position of the active node.
   getPosition?: (deriveContext: DeriveContext) => Omit<DOMRect, 'toJSON'>
   /// The function to get the placement of the block. Default is 'left'.
   getPlacement?: (deriveContext: DeriveContext) => Placement
-  /// Other middlewares for floating ui. This will be added after the internal middlewares.
+  /// Other middlewares for floating ui. They run after the internal
+  /// middlewares.
   middleware?: Middleware[]
-  /// Options for floating ui. If you pass `middleware` or `placement`, it will override the internal settings.
+  /// Options for floating ui. A `middleware` or `placement` value here
+  /// overrides the internal setting.
   floatingUIOptions?: Partial<ComputePositionConfig>
   /// The root element that the block will be appended to.
   root?: HTMLElement
@@ -78,13 +77,7 @@ export class BlockProvider {
   readonly #floatingUIOptions: Partial<ComputePositionConfig>
 
   /// @internal
-  readonly #getOffset?: (deriveContext: DeriveContext) =>
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
+  readonly #getOffset?: (deriveContext: DeriveContext) => OffsetOptions
 
   /// @internal
   readonly #getPosition?: (
@@ -185,13 +178,15 @@ export class BlockProvider {
         : 'left',
       middleware: [...middleware, ...this.#middleware],
       ...this.#floatingUIOptions,
-    }).then(({ x, y }) => {
-      Object.assign(this.#element.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      })
-      this.#element.dataset.show = 'true'
     })
+      .then(({ x, y }) => {
+        Object.assign(this.#element.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+        })
+        this.#element.dataset.show = 'true'
+      })
+      .catch(console.error)
   }
 
   /// Hide the block.

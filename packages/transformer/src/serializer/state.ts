@@ -1,12 +1,13 @@
-import { serializerMatchError } from '@milkdown/exception'
 import type {
   Fragment,
+  Mark,
   MarkType,
   Node,
   NodeType,
   Schema,
 } from '@milkdown/prose/model'
-import { Mark } from '@milkdown/prose/model'
+
+import { serializerMatchError } from '@milkdown/exception'
 
 import type {
   JSONRecord,
@@ -16,12 +17,21 @@ import type {
   RemarkParser,
   Root,
 } from '../utility'
+import type { Serializer } from './types'
+
 import { Stack } from '../utility'
 import { SerializerStackElement } from './stack-element'
-import type { Serializer } from './types'
 
 const isFragment = (x: Node | Fragment): x is Fragment =>
   Object.prototype.hasOwnProperty.call(x, 'size')
+
+interface OpenMark {
+  mark: Mark
+  /// Whether the mark node can span multiple prosemirror nodes.
+  /// Value based marks (e.g. inlineCode) hold their content as a single
+  /// value and must be closed after the node that carries them.
+  spanning: boolean
+}
 
 /// State for serializer.
 /// Transform prosemirror state into remark AST.
@@ -30,7 +40,7 @@ export class SerializerState extends Stack<
   SerializerStackElement
 > {
   /// @internal
-  #marks: readonly Mark[] = Mark.none
+  #openMarks: OpenMark[] = []
   /// Get the schema of state.
   readonly schema: Schema
 
@@ -84,43 +94,44 @@ export class SerializerState extends Stack<
   }
 
   /// @internal
-  #runNode = (node: Node) => {
-    const { marks } = node
+  /// Order the marks of a node so that marks which are already open keep
+  /// their current nesting order and can stay open, followed by the newly
+  /// opened marks sorted by priority.
+  #orderMarks = (marks: readonly Mark[]): Mark[] => {
     const getPriority = (x: Mark) => x.type.spec.priority ?? 50
-    const tmp = [...marks].sort((a, b) => getPriority(a) - getPriority(b))
-    const unPreventNext = tmp.every((mark) => !this.#runProseMark(mark, node))
-    if (unPreventNext) this.#runProseNode(node)
-
-    marks.forEach((mark) => this.#closeMark(mark))
+    const rest = [...marks].sort((a, b) => getPriority(a) - getPriority(b))
+    const continuing: Mark[] = []
+    this.#openMarks.forEach(({ mark }) => {
+      const index = rest.findIndex((x) => x.eq(mark))
+      if (index >= 0) continuing.push(...rest.splice(index, 1))
+    })
+    return continuing.concat(rest)
   }
 
   /// @internal
-  #searchType = (child: MarkdownNode, type: string): MarkdownNode => {
-    if (child.type === type) return child
-
-    if (child.children?.length !== 1) return child
-
-    const searchNode = (node: MarkdownNode): MarkdownNode | null => {
-      if (node.type === type) return node
-
-      if (node.children?.length !== 1) return null
-
-      const [firstChild] = node.children
-      if (!firstChild) return null
-
-      return searchNode(firstChild)
+  /// Close open marks that do not continue into the next node.
+  /// A mark can only stay open if every mark outside of it also stays open,
+  /// so scan from the outermost mark and close everything starting at the
+  /// first mark that ends here.
+  #closeEndedMarks = (next?: Node) => {
+    const nextMarks = next?.marks
+    let keep = 0
+    while (keep < this.#openMarks.length) {
+      const { mark, spanning } = this.#openMarks[keep] as OpenMark
+      if (spanning && nextMarks?.some((x) => x.eq(mark))) keep++
+      else break
     }
+    for (let i = this.#openMarks.length - 1; i >= keep; i--)
+      this.#closeMark((this.#openMarks[i] as OpenMark).mark)
+  }
 
-    const target = searchNode(child)
+  /// @internal
+  #runNode = (node: Node, next?: Node) => {
+    const marks = this.#orderMarks(node.marks)
+    const unPreventNext = marks.every((mark) => !this.#runProseMark(mark, node))
+    if (unPreventNext) this.#runProseNode(node)
 
-    if (!target) return child
-
-    const tmp = target.children ? [...target.children] : undefined
-    const node = { ...child, children: tmp }
-    node.children = tmp
-    target.children = [node]
-
-    return target
+    this.#closeEndedMarks(next)
   }
 
   /// @internal
@@ -133,7 +144,6 @@ export class SerializerState extends Stack<
 
       const last = nextChildren.at(-1)
       if (last && last.isMark && child.isMark) {
-        child = this.#searchType(child, last.type)
         const { children: currChildren, ...currRest } = child
         const { children: prevChildren, ...prevRest } = last
         if (
@@ -185,34 +195,33 @@ export class SerializerState extends Stack<
     let startSpaces = ''
     let endSpaces = ''
     const children = element.children
-    let first = -1
-    let last = -1
-    const findIndex = (node: MarkdownNode[]) => {
-      if (!node) return
-      node.forEach((child, index) => {
-        if (child.type === 'text' && child.value) {
-          if (first < 0) first = index
-
-          last = index
-        }
-      })
-    }
 
     if (children) {
-      findIndex(children)
-      const lastChild = children?.[last] as
+      const firstChild = children[0] as
         | (MarkdownNode & { value: string })
         | undefined
-      const firstChild = children?.[first] as
+      const lastChild = children.at(-1) as
         | (MarkdownNode & { value: string })
         | undefined
-      if (lastChild && lastChild.value.endsWith(' ')) {
-        endSpaces = lastChild.value.match(/ +$/)![0]
-        lastChild.value = lastChild.value.trimEnd()
+      if (
+        lastChild &&
+        lastChild.type === 'text' &&
+        lastChild.value.endsWith(' ')
+      ) {
+        const text = lastChild.value
+        const trimmed = text.trimEnd()
+        endSpaces = text.slice(trimmed.length)
+        lastChild.value = trimmed
       }
-      if (firstChild && firstChild.value.startsWith(' ')) {
-        startSpaces = firstChild.value.match(/^ +/)![0]
-        firstChild.value = firstChild.value.trimStart()
+      if (
+        firstChild &&
+        firstChild.type === 'text' &&
+        firstChild.value.startsWith(' ')
+      ) {
+        const text = firstChild.value
+        const trimmed = text.trimStart()
+        startSpaces = text.slice(0, text.length - trimmed.length)
+        firstChild.value = trimmed
       }
     }
 
@@ -281,26 +290,33 @@ export class SerializerState extends Stack<
     value?: string,
     props?: JSONRecord
   ) => {
-    const isIn = mark.isInSet(this.#marks)
+    const isIn = this.#openMarks.some((x) => x.mark.eq(mark))
 
     if (isIn) return this
 
-    this.#marks = mark.addToSet(this.#marks)
+    this.#openMarks.push({ mark, spanning: value == null })
     return this.openNode(type, value, { ...props, isMark: true })
   }
 
   /// @internal
   #closeMark = (mark: Mark): void => {
-    const isIn = mark.isInSet(this.#marks)
+    let index = -1
+    for (let i = this.#openMarks.length - 1; i >= 0; i--) {
+      if ((this.#openMarks[i] as OpenMark).mark.eq(mark)) {
+        index = i
+        break
+      }
+    }
 
-    if (!isIn) return
+    if (index < 0) return
 
-    this.#marks = mark.type.removeFromSet(this.#marks)
+    this.#openMarks.splice(index, 1)
     this.#closeNodeAndPush(true)
   }
 
   /// Open a new mark, the next nodes added will have that mark.
-  /// The mark will be closed automatically.
+  /// The mark will be kept open across nodes that share it and
+  /// closed automatically when it no longer applies.
   withMark = (mark: Mark, type: string, value?: string, props?: JSONRecord) => {
     this.#openMark(mark, type, value, props)
     return this
@@ -320,15 +336,21 @@ export class SerializerState extends Stack<
     do doc = this.#closeNodeAndPush()
     while (this.size())
 
+    // An mdast root must always carry a children array, even when nothing
+    // was serialized (e.g. a document of only empty paragraphs).
+    if (!doc.children) doc.children = []
+
     return doc
   }
 
-  /// Give the node or node list back to the state and
-  /// the state will find a proper runner (by `match` method in serializer spec) to handle it.
+  /// Give the node or node list back to the state and the state will find a
+  /// proper runner (by `match` method in serializer spec) to handle it. When a
+  /// node list is given, marks shared between adjacent nodes are kept open
+  /// across them so that they are serialized as one continuous span.
   next = (nodes: Node | Fragment) => {
     if (isFragment(nodes)) {
-      nodes.forEach((node) => {
-        this.#runNode(node)
+      nodes.forEach((node, _offset, index) => {
+        this.#runNode(node, nodes.maybeChild(index + 1) ?? undefined)
       })
       return this
     }
@@ -342,6 +364,7 @@ export class SerializerState extends Stack<
 
   /// Transform a prosemirror node tree into remark AST.
   run = (tree: Node) => {
+    this.#openMarks = []
     this.next(tree)
 
     return this

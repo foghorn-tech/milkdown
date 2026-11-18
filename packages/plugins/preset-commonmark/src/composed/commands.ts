@@ -1,4 +1,14 @@
 import type { MilkdownPlugin } from '@milkdown/ctx'
+
+import {
+  addBlockTypeCommand,
+  clearTextInCurrentBlockCommand,
+  isMarkSelectedCommand,
+  isNodeSelectedCommand,
+  selectTextNearPosCommand,
+  setBlockTypeCommand,
+  wrapInBlockTypeCommand,
+} from '../commands'
 import {
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
@@ -50,4 +60,13 @@ export const commands: MilkdownPlugin[] = [
 
   toggleLinkCommand,
   updateLinkCommand,
+
+  isMarkSelectedCommand,
+  isNodeSelectedCommand,
+
+  clearTextInCurrentBlockCommand,
+  setBlockTypeCommand,
+  wrapInBlockTypeCommand,
+  addBlockTypeCommand,
+  selectTextNearPosCommand,
 ]

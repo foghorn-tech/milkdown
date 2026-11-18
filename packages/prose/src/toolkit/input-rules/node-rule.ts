@@ -1,6 +1,7 @@
-import { InputRule } from '../../inputrules'
 import type { NodeType } from '../../model'
 import type { Captured, Options } from './common'
+
+import { InputRule } from '../../inputrules'
 
 /// Create an input rule for a node.
 export function nodeRule(
@@ -38,7 +39,7 @@ export function nodeRule(
         node
       )
       options.beforeDispatch?.({
-        match: [fullMatch, group ?? ''],
+        match: [fullMatch, group],
         start,
         end,
         tr,

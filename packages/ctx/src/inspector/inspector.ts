@@ -10,7 +10,8 @@ export interface Telemetry {
   waitTimers: { name: string; duration: number; status: TimerStatus }[]
 }
 
-/// The inspector object that is used to inspect the runtime environment of a ctx.
+/// The inspector object that is used to inspect the runtime environment of a
+/// ctx.
 export class Inspector {
   /// @internal
   readonly #meta: Meta
@@ -90,9 +91,11 @@ export class Inspector {
   /// @internal
   readonly onWait = (timerType: TimerType, promise: Promise<void>) => {
     const start = Date.now()
-    promise.finally(() => {
-      this.#waitTimers.set(timerType, { duration: Date.now() - start })
-    })
+    promise
+      .finally(() => {
+        this.#waitTimers.set(timerType, { duration: Date.now() - start })
+      })
+      .catch(console.error)
   }
 
   /// @internal

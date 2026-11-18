@@ -1,4 +1,6 @@
 import { commandsCtx, remarkStringifyOptionsCtx } from '@milkdown/core'
+import { markRule } from '@milkdown/prose'
+import { toggleMark } from '@milkdown/prose/commands'
 import {
   $command,
   $inputRule,
@@ -6,8 +8,7 @@ import {
   $markSchema,
   $useKeymap,
 } from '@milkdown/utils'
-import { toggleMark } from '@milkdown/prose/commands'
-import { markRule } from '@milkdown/prose'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for the strong mark.
@@ -23,6 +24,7 @@ export const strongSchema = $markSchema('strong', (ctx) => ({
   attrs: {
     marker: {
       default: ctx.get(remarkStringifyOptionsCtx).strong || '*',
+      validate: 'string',
     },
   },
   parseDOM: [
@@ -84,13 +86,21 @@ withMeta(toggleStrongCommand, {
 
 /// A input rule that will capture the strong mark.
 export const strongInputRule = $inputRule((ctx) => {
-  return markRule(/(?:\*\*|__)([^*_]+)(?:\*\*|__)$/, strongSchema.type(ctx), {
-    getAttr: (match) => {
-      return {
-        marker: match[0].startsWith('*') ? '*' : '_',
-      }
-    },
-  })
+  // An opening delimiter next to an alphanumeric character, a colon or a
+  // slash must not match. That keeps the rule out of a file path, a URL
+  // and an intra-word case such as `a**b**c`. The closing delimiter
+  // rejects the same characters, the same as the strike-through rule.
+  return markRule(
+    /(?<![\w:/])(?:\*\*|__)([^*_]+?)(?:\*\*|__)(?![\w/])$/,
+    strongSchema.type(ctx),
+    {
+      getAttr: (match) => {
+        return {
+          marker: match[0].startsWith('*') ? '*' : '_',
+        }
+      },
+    }
+  )
 })
 
 withMeta(strongInputRule, {

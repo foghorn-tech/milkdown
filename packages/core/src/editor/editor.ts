@@ -1,14 +1,18 @@
 import type { CtxRunner, MilkdownPlugin, Telemetry } from '@milkdown/ctx'
+
 import { Clock, Container, Ctx } from '@milkdown/ctx'
 
 import type { Config } from '../internal-plugin'
+
 import {
   commands,
   config,
   editorState,
   editorView,
   init,
+  keymap,
   parser,
+  pasteRule,
   schema,
   serializer,
 } from '../internal-plugin'
@@ -72,13 +76,17 @@ export class Editor {
   /// @internal
   readonly #loadInternal = () => {
     const configPlugin = config(async (ctx) => {
-      await Promise.all(this.#configureList.map((fn) => fn(ctx)))
+      await Promise.all(
+        this.#configureList.map((fn) => Promise.resolve(fn(ctx)))
+      )
     })
     const internalPlugins = [
       schema,
       parser,
       serializer,
       commands,
+      keymap,
+      pasteRule,
       editorState,
       editorView,
       init(this),
@@ -101,7 +109,7 @@ export class Editor {
   /// @internal
   readonly #cleanup = (plugins: MilkdownPlugin[], remove = false) => {
     return Promise.all(
-      [plugins].flat().map((plugin) => {
+      [plugins].flat().map(async (plugin) => {
         const loader = this.#usrPluginStore.get(plugin)
         const cleanup = loader?.cleanup
         if (remove) this.#usrPluginStore.delete(plugin)
@@ -122,7 +130,7 @@ export class Editor {
   /// @internal
   readonly #cleanupInternal = async () => {
     await Promise.all(
-      [...this.#sysPluginStore.entries()].map(([_, { cleanup }]) => {
+      [...this.#sysPluginStore.entries()].map(async ([_, { cleanup }]) => {
         if (typeof cleanup === 'function') return cleanup()
 
         return cleanup
@@ -208,7 +216,6 @@ export class Editor {
     plugins: MilkdownPlugin | MilkdownPlugin[]
   ): Promise<Editor> => {
     if (this.#status === EditorStatus.OnCreate) {
-      // eslint-disable-next-line no-console
       console.warn(
         '[Milkdown]: You are trying to remove plugins when the editor is creating, this is not recommended, please check your code.'
       )
@@ -277,11 +284,10 @@ export class Editor {
   /// This method should be used after the editor is created.
   readonly action = <T>(action: (ctx: Ctx) => T) => action(this.#ctx)
 
-  /// Get inspections of plugins in editor.
-  /// Make sure you have enabled inspector by `editor.enableInspector()` before calling this method.
+  /// Get inspections of plugins in editor. Make sure you have enabled inspector
+  /// by `editor.enableInspector()` before calling this method.
   readonly inspect = (): Telemetry[] => {
     if (!this.#enableInspector) {
-      // eslint-disable-next-line no-console
       console.warn(
         '[Milkdown]: You are trying to collect inspection when inspector is disabled, please enable inspector by `editor.enableInspector()` first.'
       )

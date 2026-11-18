@@ -1,15 +1,17 @@
-import { findParentNode, posToDOMRect } from '@milkdown/prose'
-import type { EditorState } from '@milkdown/prose/state'
-import type { Node } from '@milkdown/prose/model'
-import { TextSelection } from '@milkdown/prose/state'
-import type { EditorView } from '@milkdown/prose/view'
-import debounce from 'lodash.debounce'
 import type {
   ComputePositionConfig,
   Middleware,
+  OffsetOptions,
   VirtualElement,
 } from '@floating-ui/dom'
+import type { Node } from '@milkdown/prose/model'
+import type { EditorState } from '@milkdown/prose/state'
+import type { EditorView } from '@milkdown/prose/view'
+
 import { computePosition, flip, offset } from '@floating-ui/dom'
+import { findParentNode, posToDOMRect } from '@milkdown/prose'
+import { TextSelection } from '@milkdown/prose/state'
+import { debounce } from 'lodash-es'
 
 /// Options for slash provider.
 export interface SlashProviderOptions {
@@ -22,16 +24,12 @@ export interface SlashProviderOptions {
   /// The key trigger for shouldShow, '/' by default.
   trigger?: string | string[]
   /// The offset to get the block. Default is 0.
-  offset?:
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
-  /// Other middlewares for floating ui. This will be added after the internal middlewares.
+  offset?: OffsetOptions
+  /// Other middlewares for floating ui. They run after the internal
+  /// middlewares.
   middleware?: Middleware[]
-  /// Options for floating ui. If you pass `middleware` or `placement`, it will override the internal settings.
+  /// Options for floating ui. A `middleware` or `placement` value here
+  /// overrides the internal setting.
   floatingUIOptions?: Partial<ComputePositionConfig>
   /// The root element that the slash will be appended to.
   root?: HTMLElement
@@ -63,14 +61,14 @@ export class SlashProvider {
   /// @internal
   readonly #shouldShow: (view: EditorView, prevState?: EditorState) => boolean
 
+  /// @internal
+  readonly #updater: {
+    (view: EditorView, prevState?: EditorState): void
+    cancel: () => void
+  }
+
   /// The offset to get the block. Default is 0.
-  readonly #offset?:
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
+  readonly #offset?: OffsetOptions
 
   /// On show callback.
   onShow = () => {}
@@ -87,6 +85,7 @@ export class SlashProvider {
     this.#middleware = options.middleware ?? []
     this.#floatingUIOptions = options.floatingUIOptions ?? {}
     this.#root = options.root
+    this.#updater = debounce(this.#onUpdate, this.#debounce)
   }
 
   /// @internal
@@ -119,18 +118,20 @@ export class SlashProvider {
       placement: 'bottom-start',
       middleware: [flip(), offset(this.#offset), ...this.#middleware],
       ...this.#floatingUIOptions,
-    }).then(({ x, y }) => {
-      Object.assign(this.element.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      })
     })
+      .then(({ x, y }) => {
+        Object.assign(this.element.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+        })
+      })
+      .catch(console.error)
 
     this.show()
   }
 
   /// @internal
-  #_shouldShow(view: EditorView): boolean {
+  #_shouldShow = (view: EditorView): boolean => {
     const currentTextBlockContent = this.getContent(view)
 
     if (!currentTextBlockContent) return false
@@ -146,13 +147,12 @@ export class SlashProvider {
 
   /// Update provider state by editor view.
   update = (view: EditorView, prevState?: EditorState): void => {
-    const updater = debounce(this.#onUpdate, this.#debounce)
-
-    updater(view, prevState)
+    this.#updater(view, prevState)
   }
 
-  /// Get the content of the current text block.
-  /// Pass the `matchNode` function to determine whether the current node should be matched, by default, it will match the paragraph node.
+  /// Get the content of the current text block. Pass `matchNode` to
+  /// decide whether the current node matches. It matches a paragraph
+  /// node by default.
   getContent = (
     view: EditorView,
     matchNode: (node: Node) => boolean = (node) =>
@@ -161,6 +161,8 @@ export class SlashProvider {
     const { selection } = view.state
     const { empty, $from } = selection
     const isTextBlock = view.state.selection instanceof TextSelection
+
+    if (typeof document === 'undefined') return
 
     const isSlashChildren = this.element.contains(document.activeElement)
 
@@ -184,7 +186,9 @@ export class SlashProvider {
   }
 
   /// Destroy the slash.
-  destroy = () => {}
+  destroy = () => {
+    this.#updater.cancel()
+  }
 
   /// Show the slash.
   show = () => {

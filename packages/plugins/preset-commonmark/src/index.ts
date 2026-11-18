@@ -1,4 +1,5 @@
 import type { MilkdownPlugin } from '@milkdown/ctx'
+
 import {
   commands,
   inputRules,
@@ -12,6 +13,7 @@ export * from './node'
 export * from './mark'
 export * from './plugin'
 export * from './composed'
+export * from './commands'
 
 /// The commonmark preset, includes all the plugins.
 export const commonmark: MilkdownPlugin[] = [

@@ -1,9 +1,12 @@
-import { $remark } from '@milkdown/utils'
 import type { Node } from '@milkdown/transformer'
+
+import { $remark } from '@milkdown/utils'
 import { visit } from 'unist-util-visit'
+
 import { withMeta } from '../__internal__'
 
-/// This plugin is used to keep the marker (`_` and `*`) of emphasis and strong nodes.
+/// This plugin keeps the `_` and `*` marker of an emphasis node and a
+/// strong node.
 export const remarkMarker = $remark(
   'remarkMarker',
   () => () => (tree, file) => {

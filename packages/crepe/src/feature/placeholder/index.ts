@@ -1,11 +1,16 @@
-import { $ctx, $prose } from '@milkdown/kit/utils'
-import type { EditorState } from '@milkdown/kit/prose/state'
-import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import type { Node } from '@milkdown/kit/prose/model'
-import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
+import type { EditorState } from '@milkdown/kit/prose/state'
+
 import { findParent } from '@milkdown/kit/prose'
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
+import { $ctx, $prose } from '@milkdown/kit/utils'
+
 import type { DefineFeature } from '../shared'
+
+import { crepeFeatureConfig, useCrepe } from '../../core/slice'
 import { isInCodeBlock, isInList } from '../../utils'
+import { CrepeFeature } from '../index'
 
 function isDocEmpty(doc: Node) {
   return doc.childCount <= 1 && !doc.firstChild?.content.size
@@ -38,7 +43,7 @@ interface PlaceholderConfig {
   mode: 'doc' | 'block'
 }
 
-export type PlaceHolderFeatureConfig = Partial<PlaceholderConfig>
+export type PlaceholderFeatureConfig = Partial<PlaceholderConfig>
 
 export const placeholderConfig = $ctx(
   {
@@ -53,6 +58,9 @@ export const placeholderPlugin = $prose((ctx) => {
     key: new PluginKey('CREPE_PLACEHOLDER'),
     props: {
       decorations: (state) => {
+        const crepe = useCrepe(ctx)
+        if (crepe.readonly) return null
+
         const config = ctx.get(placeholderConfig.key)
         if (config.mode === 'doc' && !isDocEmpty(state.doc)) return null
 
@@ -69,11 +77,12 @@ export const placeholderPlugin = $prose((ctx) => {
   })
 })
 
-export const defineFeature: DefineFeature<PlaceHolderFeatureConfig> = (
+export const placeholder: DefineFeature<PlaceholderFeatureConfig> = (
   editor,
   config
 ) => {
   editor
+    .config(crepeFeatureConfig(CrepeFeature.Placeholder))
     .config((ctx) => {
       if (config) {
         ctx.update(placeholderConfig.key, (prev) => {

@@ -1,7 +1,8 @@
 import type { MilkdownPlugin, TimerType } from '@milkdown/ctx'
+import type { Parser } from '@milkdown/transformer'
+
 import { createSlice, createTimer } from '@milkdown/ctx'
 import { ctxCallOutOfScope } from '@milkdown/exception'
-import type { Parser } from '@milkdown/transformer'
 import { ParserState } from '@milkdown/transformer'
 
 import { withMeta } from '../__internal__'
@@ -18,14 +19,14 @@ const outOfScope = (() => {
 /// A slice which contains the parser.
 export const parserCtx = createSlice(outOfScope, 'parser')
 
-/// A slice which stores timers that need to be waited for before starting to run the plugin.
-/// By default, it's `[SchemaReady]`.
+/// A slice that holds the timers to wait for before the plugin
+/// runs. It defaults to `[SchemaReady]`.
 export const parserTimerCtx = createSlice([] as TimerType[], 'parserTimer')
 
 /// The parser plugin.
 /// This plugin will create a parser.
 ///
-/// This plugin will wait for the schema plugin.
+/// This plugin waits for the schema plugin.
 export const parser: MilkdownPlugin = (ctx) => {
   ctx
     .inject(parserCtx, outOfScope)

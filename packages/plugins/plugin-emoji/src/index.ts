@@ -1,10 +1,12 @@
 import type { MilkdownPlugin } from '@milkdown/ctx'
 import type { RemarkPluginRaw } from '@milkdown/transformer'
+import type { RemarkEmojiOptions } from 'remark-emoji'
+
 import { expectDomTypeError } from '@milkdown/exception'
 import { InputRule } from '@milkdown/prose/inputrules'
 import { $inputRule, $nodeAttr, $nodeSchema, $remark } from '@milkdown/utils'
+import DOMPurify from 'dompurify'
 import { get } from 'node-emoji'
-import type { RemarkEmojiOptions } from 'remark-emoji'
 import remarkEmoji from 'remark-emoji'
 
 import { parse } from './__internal__/parse'
@@ -35,20 +37,40 @@ export const emojiSchema = $nodeSchema('emoji', (ctx) => ({
       getAttrs: (dom) => {
         if (!(dom instanceof HTMLElement)) throw expectDomTypeError(dom)
 
-        return { html: dom.innerHTML }
+        // Sanitize at the untrusted entry point (e.g. pasted HTML) so an
+        // unsanitized value never enters the document state.
+        return { html: DOMPurify.sanitize(dom.innerHTML) }
       },
     },
   ],
   toDOM: (node) => {
     const attrs = ctx.get(emojiAttr.key)(node)
     const tmp = document.createElement('span')
-    tmp.innerHTML = node.attrs.html
-    const dom = tmp.firstElementChild?.cloneNode()
+    tmp.innerHTML = DOMPurify.sanitize(node.attrs.html)
+
+    const firstChild = tmp.firstChild
+    if (!firstChild) {
+      console.warn('Milkdown emoji plugin: emoji is not valid')
+      return ['span', { ...attrs.container, 'data-type': 'emoji' }, tmp]
+    }
+
+    const dom = firstChild.cloneNode()
     tmp.remove()
-    if (dom && dom instanceof HTMLElement)
-      Object.entries<string>(attrs.img).forEach(([key, value]) =>
-        dom.setAttribute(key, value)
-      )
+
+    // Non-element content, e.g. plain-text symbols like ™ or © that twemoji
+    // leaves untouched. prosemirror-model 1.25.5+ only accepts element nodes
+    // as DOM spec children, so render the text through a string child instead.
+    if (!(dom instanceof HTMLElement)) {
+      return [
+        'span',
+        { ...attrs.container, 'data-type': 'emoji' },
+        dom.textContent ?? '',
+      ]
+    }
+
+    Object.entries<string>(attrs.img).forEach(([key, value]) =>
+      dom.setAttribute(key, value)
+    )
 
     return ['span', { ...attrs.container, 'data-type': 'emoji' }, dom]
   },
@@ -61,11 +83,14 @@ export const emojiSchema = $nodeSchema('emoji', (ctx) => ({
   toMarkdown: {
     match: (node) => node.type.name === 'emoji',
     runner: (state, node) => {
-      const span = document.createElement('span')
-      span.innerHTML = node.attrs.html
-      const img = span.querySelector('img')
+      // An inert `<template>` parses the html. Its content fragment
+      // loads no resource, unlike a live `<span>`, so an `<img onerror>`
+      // payload cannot fire during serialization. The sanitize call adds
+      // a second layer of defense.
+      const template = document.createElement('template')
+      template.innerHTML = DOMPurify.sanitize(node.attrs.html)
+      const img = template.content.querySelector('img')
       const title = img?.title || img?.alt
-      span.remove()
       state.addNode('text', undefined, title)
     },
   },

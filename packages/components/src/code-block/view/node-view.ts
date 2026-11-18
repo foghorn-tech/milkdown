@@ -1,56 +1,193 @@
+import type { Extension, Line, SelectionRange } from '@codemirror/state'
+import type { Node } from '@milkdown/prose/model'
 import type { EditorView, NodeView } from '@milkdown/prose/view'
+
+import { Compartment, EditorState } from '@codemirror/state'
 import {
   EditorView as CodeMirror,
   type KeyBinding,
   type ViewUpdate,
   keymap as cmKeymap,
+  drawSelection,
 } from '@codemirror/view'
-import type { Node } from '@milkdown/prose/model'
-import { redo, undo } from '@milkdown/prose/history'
-import { Compartment, EditorState } from '@codemirror/state'
-import type { Line, SelectionRange } from '@codemirror/state'
 import { exitCode } from '@milkdown/prose/commands'
+import { redo, undo } from '@milkdown/prose/history'
 import { TextSelection } from '@milkdown/prose/state'
+import { createApp, ref, watchEffect, type App, type WatchHandle } from 'vue'
 
 import type { CodeBlockConfig } from '../config'
-import type { CodeComponentProps } from './component'
 import type { LanguageLoader } from './loader'
 
-export class CodeMirrorBlock implements NodeView {
-  dom: HTMLElement & CodeComponentProps
-  cm: CodeMirror
+import { CodeBlock } from './components/code-block'
 
+const visibilityCallbacks = new WeakMap<
+  Element,
+  (isIntersecting: boolean) => void
+>()
+
+let sharedObserver: IntersectionObserver | null = null
+
+function getSharedObserver(): IntersectionObserver {
+  if (!sharedObserver) {
+    sharedObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const callback = visibilityCallbacks.get(entry.target)
+          callback?.(entry.isIntersecting)
+        }
+      },
+      { rootMargin: '200px' }
+    )
+  }
+  return sharedObserver
+}
+
+export class CodeMirrorBlock implements NodeView {
+  /** Delay before tearing down an off-screen CodeMirror instance. */
+  static TEARDOWN_DELAY = 5000
+
+  dom: HTMLElement
+  cm!: CodeMirror
+  app!: App
+
+  selected = ref(false)
+  language = ref('')
+  text = ref('')
+
+  private initialized = false
   private updating = false
   private languageName: string = ''
+  private disposeSelectedWatcher: WatchHandle
+  private teardownTimer: ReturnType<typeof setTimeout> | null = null
 
   private readonly languageConf: Compartment
   private readonly readOnlyConf: Compartment
+  private readonly extensionsConf: Compartment
+  private extensions: Extension[]
+  private disposeConfigWatcher?: () => void
 
   constructor(
     public node: Node,
     public view: EditorView,
     public getPos: () => number | undefined,
     public loader: LanguageLoader,
-    public config: CodeBlockConfig
+    public config: CodeBlockConfig,
+    watchConfig?: (watcher: (config: CodeBlockConfig) => void) => () => void
   ) {
     this.languageConf = new Compartment()
     this.readOnlyConf = new Compartment()
+    this.extensionsConf = new Compartment()
+    this.extensions = config.extensions
+    this.disposeConfigWatcher = watchConfig?.(this.onConfigChange)
+
+    this.text.value = this.node.textContent
+    this.language.value = this.node.attrs.language ?? ''
+
+    this.dom = document.createElement('div')
+    this.dom.className = 'milkdown-code-block'
+
+    this.disposeSelectedWatcher = watchEffect(() => {
+      const isSelected = this.selected.value
+      if (isSelected) {
+        this.dom.classList.add('selected')
+      } else {
+        this.dom.classList.remove('selected')
+      }
+    })
+
+    this.renderPlaceholder()
+
+    visibilityCallbacks.set(this.dom, (isIntersecting) => {
+      if (isIntersecting) {
+        this.cancelTeardown()
+        this.initializeCodeMirror()
+      } else if (this.initialized) {
+        this.scheduleTeardown()
+      }
+    })
+    getSharedObserver().observe(this.dom)
+  }
+
+  private renderPlaceholder() {
+    const pre = document.createElement('pre')
+    pre.className = 'milkdown-code-block-placeholder'
+    const code = document.createElement('code')
+    code.textContent = this.node.textContent
+    pre.appendChild(code)
+    this.dom.appendChild(pre)
+  }
+
+  private initializeCodeMirror() {
+    if (this.initialized) return
+    this.initialized = true
 
     this.cm = new CodeMirror({
       doc: this.node.textContent,
       root: this.view.root,
       extensions: [
         this.readOnlyConf.of(EditorState.readOnly.of(!this.view.editable)),
+        drawSelection(),
         cmKeymap.of(this.codeMirrorKeymap()),
         this.languageConf.of([]),
-        ...config.extensions,
+        // Block a user edit when the editor is not editable. An update
+        // synced from ProseMirror always passes.
+        EditorState.changeFilter.of(() => this.view.editable || this.updating),
+        this.extensionsConf.of(this.extensions),
         CodeMirror.updateListener.of(this.forwardUpdate),
       ],
     })
 
-    this.dom = this.createDom()
+    const placeholder = this.dom.querySelector(
+      '.milkdown-code-block-placeholder'
+    )
+    if (placeholder) {
+      this.dom.removeChild(placeholder)
+    }
+
+    this.app = this.createApp()
+    this.app.mount(this.dom)
 
     this.updateLanguage()
+  }
+
+  private teardownCodeMirror() {
+    if (!this.initialized) return
+    // Don't tear down if the user is focused on this block
+    if (this.cm.hasFocus || this.selected.value) return
+
+    this.app.unmount()
+    this.cm.destroy()
+    this.initialized = false
+    this.languageName = ''
+
+    while (this.dom.firstChild) {
+      this.dom.removeChild(this.dom.firstChild)
+    }
+    this.renderPlaceholder()
+  }
+
+  private scheduleTeardown() {
+    this.cancelTeardown()
+    this.teardownTimer = setTimeout(
+      () => this.teardownCodeMirror(),
+      CodeMirrorBlock.TEARDOWN_DELAY
+    )
+  }
+
+  private cancelTeardown() {
+    if (this.teardownTimer != null) {
+      clearTimeout(this.teardownTimer)
+      this.teardownTimer = null
+    }
+  }
+
+  // Only `extensions` is applied to a live code block. The other options
+  // are read when the code block is created.
+  private onConfigChange = ({ extensions }: CodeBlockConfig) => {
+    if (extensions === this.extensions) return
+    this.extensions = extensions
+    if (!this.initialized) return
+    this.cm.dispatch({ effects: this.extensionsConf.reconfigure(extensions) })
   }
 
   private forwardUpdate = (update: ViewUpdate) => {
@@ -77,21 +214,17 @@ export class CodeMirrorBlock implements NodeView {
     }
   }
 
-  private createDom() {
-    const dom = document.createElement('milkdown-code-block') as HTMLElement &
-      CodeComponentProps
-    dom.codemirror = this.cm
-    dom.getAllLanguages = this.getAllLanguages
-    dom.setLanguage = this.setLanguage
-    dom.isEditorReadonly = () => !this.view.editable
-    dom.text = this.node.textContent
-    const {
-      languages: _languages,
-      extensions: _extensions,
-      ...viewConfig
-    } = this.config
-    dom.config = viewConfig
-    return dom
+  private createApp = () => {
+    return createApp(CodeBlock, {
+      text: this.text,
+      selected: this.selected,
+      codemirror: this.cm,
+      language: this.language,
+      getAllLanguages: this.getAllLanguages,
+      getReadOnly: () => !this.view.editable,
+      setLanguage: this.setLanguage,
+      config: this.config,
+    })
   }
 
   private updateLanguage() {
@@ -99,17 +232,19 @@ export class CodeMirrorBlock implements NodeView {
 
     if (languageName === this.languageName) return
 
-    this.dom.language = languageName
+    this.language.value = languageName
     const language = this.loader.load(languageName ?? '')
 
-    language.then((lang) => {
-      if (lang) {
-        this.cm.dispatch({
-          effects: this.languageConf.reconfigure(lang),
-        })
-        this.languageName = languageName
-      }
-    })
+    language
+      .then((lang) => {
+        if (lang) {
+          this.cm.dispatch({
+            effects: this.languageConf.reconfigure(lang),
+          })
+          this.languageName = languageName
+        }
+      })
+      .catch(console.error)
   }
 
   private codeMirrorKeymap = (): KeyBinding[] => {
@@ -182,12 +317,19 @@ export class CodeMirrorBlock implements NodeView {
   }
 
   setSelection(anchor: number, head: number) {
+    if (!this.initialized) {
+      this.initializeCodeMirror()
+    }
+
     if (!this.cm.dom.isConnected) return
 
     this.cm.focus()
     this.updating = true
-    this.cm.dispatch({ selection: { anchor, head } })
-    this.updating = false
+    try {
+      this.cm.dispatch({ selection: { anchor, head } })
+    } finally {
+      this.updating = false
+    }
   }
 
   update(node: Node) {
@@ -196,7 +338,20 @@ export class CodeMirrorBlock implements NodeView {
     if (this.updating) return true
 
     this.node = node
-    this.dom.text = node.textContent
+    this.text.value = node.textContent
+    this.language.value = node.attrs.language ?? ''
+
+    if (!this.initialized) {
+      // Update the placeholder text
+      const code = this.dom.querySelector(
+        '.milkdown-code-block-placeholder code'
+      )
+      if (code) {
+        code.textContent = node.textContent
+      }
+      return true
+    }
+
     this.updateLanguage()
     if (this.view.editable === this.cm.state.readOnly) {
       this.cm.dispatch({
@@ -209,21 +364,30 @@ export class CodeMirrorBlock implements NodeView {
     const change = computeChange(this.cm.state.doc.toString(), node.textContent)
     if (change) {
       this.updating = true
-      this.cm.dispatch({
-        changes: { from: change.from, to: change.to, insert: change.text },
-      })
-      this.updating = false
+      try {
+        this.cm.dispatch({
+          changes: { from: change.from, to: change.to, insert: change.text },
+          // Only follow the change when the user can actually be editing here,
+          // so programmatic updates don't scroll a readonly editor around.
+          scrollIntoView: this.view.editable,
+        })
+      } finally {
+        this.updating = false
+      }
     }
     return true
   }
 
   selectNode() {
-    this.dom.selected = true
+    if (!this.initialized) {
+      this.initializeCodeMirror()
+    }
+    this.selected.value = true
     this.cm.focus()
   }
 
   deselectNode() {
-    this.dom.selected = false
+    this.selected.value = false
   }
 
   stopEvent() {
@@ -231,7 +395,15 @@ export class CodeMirrorBlock implements NodeView {
   }
 
   destroy() {
-    this.cm.destroy()
+    this.disposeConfigWatcher?.()
+    this.cancelTeardown()
+    getSharedObserver().unobserve(this.dom)
+    visibilityCallbacks.delete(this.dom)
+    if (this.initialized) {
+      this.app.unmount()
+      this.cm.destroy()
+    }
+    this.disposeSelectedWatcher()
   }
 
   setLanguage = (language: string) => {

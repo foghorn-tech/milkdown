@@ -1,14 +1,19 @@
 {
   "name": "@milkdown/prose",
-  "type": "module",
-  "version": "7.7.0",
+  "version": "7.23.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Milkdown/milkdown.git",
     "directory": "packages/prose"
   },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "type": "module",
   "sideEffects": false,
+  "main": "./src/index.ts",
   "exports": {
     ".": {
       "import": "./src/index.ts"
@@ -52,12 +57,56 @@
     "./tables": {
       "import": "./src/tables.ts"
     },
-    "./view/style/prosemirror.css": "./node_modules/prosemirror-view/style/prosemirror.css",
-    "./tables/style/tables.css": "./node_modules/prosemirror-tables/style/tables.css",
-    "./gapcursor/style/gapcursor.css": "./node_modules/prosemirror-gapcursor/style/gapcursor.css"
+    "./view/style/prosemirror.css": "./lib/style/prosemirror.css",
+    "./tables/style/tables.css": "./lib/style/tables.css",
+    "./gapcursor/style/gapcursor.css": "./lib/style/gapcursor.css"
   },
-  "main": "./src/index.ts",
   "publishConfig": {
+    "main": "./lib/index.js",
+    "types": "./lib/index.d.ts",
+    "typesVersions": {
+      "*": {
+        "changeset": [
+          "lib/changeset.d.ts"
+        ],
+        "commands": [
+          "lib/commands.d.ts"
+        ],
+        "dropcursor": [
+          "lib/dropcursor.d.ts"
+        ],
+        "gapcursor": [
+          "lib/gapcursor.d.ts"
+        ],
+        "history": [
+          "lib/history.d.ts"
+        ],
+        "inputrules": [
+          "lib/inputrules.d.ts"
+        ],
+        "keymap": [
+          "lib/keymap.d.ts"
+        ],
+        "model": [
+          "lib/model.d.ts"
+        ],
+        "schema-list": [
+          "lib/schema-list.d.ts"
+        ],
+        "state": [
+          "lib/state.d.ts"
+        ],
+        "transform": [
+          "lib/transform.d.ts"
+        ],
+        "view": [
+          "lib/view.d.ts"
+        ],
+        "tables": [
+          "lib/tables.d.ts"
+        ]
+      }
+    },
     "exports": {
       ".": {
         "types": "./lib/index.d.ts",
@@ -118,96 +167,25 @@
       "./view/style/prosemirror.css": "./lib/style/prosemirror.css",
       "./tables/style/tables.css": "./lib/style/tables.css",
       "./gapcursor/style/gapcursor.css": "./lib/style/gapcursor.css"
-    },
-    "main": "./lib/index.js",
-    "types": "./lib/index.d.ts",
-    "typesVersions": {
-      "*": {
-        "changeset": [
-          "lib/changeset.d.ts"
-        ],
-        "commands": [
-          "lib/commands.d.ts"
-        ],
-        "dropcursor": [
-          "lib/dropcursor.d.ts"
-        ],
-        "gapcursor": [
-          "lib/gapcursor.d.ts"
-        ],
-        "history": [
-          "lib/history.d.ts"
-        ],
-        "inputrules": [
-          "lib/inputrules.d.ts"
-        ],
-        "keymap": [
-          "lib/keymap.d.ts"
-        ],
-        "model": [
-          "lib/model.d.ts"
-        ],
-        "schema-list": [
-          "lib/schema-list.d.ts"
-        ],
-        "state": [
-          "lib/state.d.ts"
-        ],
-        "transform": [
-          "lib/transform.d.ts"
-        ],
-        "view": [
-          "lib/view.d.ts"
-        ],
-        "tables": [
-          "lib/tables.d.ts"
-        ]
-      }
     }
   },
-  "files": [
-    "lib",
-    "src"
-  ],
   "scripts": {
-    "start": "rollup -c -w",
-    "test": "vitest",
-    "tsc": "tsc --noEmit && echo",
-    "build": "rollup -c && echo"
+    "build": "rollup -c"
   },
   "dependencies": {
     "@milkdown/exception": "workspace:*",
-    "prosemirror-changeset": "^2.2.1",
-    "prosemirror-commands": "^1.6.2",
-    "prosemirror-dropcursor": "^1.8.1",
-    "prosemirror-gapcursor": "^1.3.2",
-    "prosemirror-history": "^1.4.1",
-    "prosemirror-inputrules": "^1.4.0",
-    "prosemirror-keymap": "^1.2.2",
-    "prosemirror-model": "^1.24.1",
-    "prosemirror-schema-list": "^1.5.0",
-    "prosemirror-state": "^1.4.3",
-    "prosemirror-tables": "^1.6.2",
-    "prosemirror-transform": "^1.10.2",
-    "prosemirror-view": "^1.37.1",
-    "tslib": "^2.8.1"
-  },
-  "nx": {
-    "targets": {
-      "build": {
-        "outputs": [
-          "{projectRoot}/lib"
-        ],
-        "dependsOn": [
-          "build"
-        ]
-      },
-      "tsc": {
-        "outputs": [],
-        "dependsOn": [
-          "build"
-        ]
-      }
-    }
+    "prosemirror-changeset": "^2.3.1",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-dropcursor": "^1.8.2",
+    "prosemirror-gapcursor": "^1.4.0",
+    "prosemirror-history": "^1.5.0",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.4",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-tables": "^1.8.1",
+    "prosemirror-transform": "^1.10.5",
+    "prosemirror-view": "^1.41.3"
   }
 }

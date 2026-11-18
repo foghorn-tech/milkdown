@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { focusEditor, getMarkdown } from 'tests/misc'
+
+import { focusEditor, getMarkdown, waitNextFrame } from '../misc'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/crepe/')
@@ -10,7 +11,7 @@ test('latex block preview toggle', async ({ page }) => {
   await page.keyboard.type('$$')
   await page.keyboard.press('Enter')
 
-  const codeBlock = page.locator('milkdown-code-block')
+  const codeBlock = page.locator('.milkdown-code-block')
   const codemirror = codeBlock.locator('.codemirror-host')
   const preview = codeBlock.locator('.preview')
   const codeTools = codeBlock.locator('.tools')
@@ -27,7 +28,7 @@ test('latex block preview toggle', async ({ page }) => {
 
   await expect(preview).toBeVisible()
   const markdown = await getMarkdown(page)
-  expect(markdown.trim()).toEqual('$$\nE=mc^2\n$$\n\n<br />')
+  expect(markdown.trim()).toEqual('$$\nE=mc^2\n$$')
 
   await codeTools.hover()
   await expect(previewToggleButton).toBeVisible()
@@ -45,7 +46,7 @@ test('latex inline', async ({ page }) => {
   await page.keyboard.type('$E=mc^2$')
 
   const inlineLatex = page.locator('span[data-type="math_inline"]')
-  const inlineLatexInput = page.locator('milkdown-latex-inline-edit')
+  const inlineLatexInput = page.locator('.milkdown-latex-inline-edit')
   const inlineLatexInputConfirm = inlineLatexInput.locator('button')
 
   await expect(inlineLatex).toBeVisible()
@@ -57,6 +58,7 @@ test('latex inline', async ({ page }) => {
   await expect(inlineLatexInput).toBeVisible()
 
   await inlineLatexInput.click()
+  await waitNextFrame(page)
   await page.keyboard.press('Backspace')
   await page.keyboard.type('3')
   await page.keyboard.press('Enter')
@@ -65,6 +67,7 @@ test('latex inline', async ({ page }) => {
   expect(markdown.trim()).toEqual('$E=mc^3$')
 
   await inlineLatexInput.click()
+  await waitNextFrame(page)
   await page.keyboard.press('Backspace')
   await page.keyboard.type('4')
   await inlineLatexInputConfirm.click()

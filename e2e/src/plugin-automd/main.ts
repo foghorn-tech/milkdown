@@ -1,12 +1,11 @@
 import { Editor, rootCtx } from '@milkdown/core'
-import { nord } from '@milkdown/theme-nord'
-import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { automd } from '@milkdown/plugin-automd'
+import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { commonmark, markInputRules } from '@milkdown/preset-commonmark'
 import { markInputRules as GFMMarkInputRules, gfm } from '@milkdown/preset-gfm'
+import { nord } from '@milkdown/theme-nord'
 
 import { setup } from '../utils'
-
 import '@milkdown/theme-nord/style.css'
 
 import '../style.css'
@@ -16,7 +15,7 @@ setup(() => {
     .config((ctx) => {
       ctx.set(rootCtx, document.getElementById('app'))
       ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.log(markdown)
       })
     })
@@ -26,4 +25,4 @@ setup(() => {
     .use(listener)
     .use(automd)
     .create()
-})
+}).catch(console.error)

@@ -1,14 +1,23 @@
-import type { EditorState } from '@milkdown/prose/state'
-import { TextSelection } from '@milkdown/prose/state'
-import type { EditorView } from '@milkdown/prose/view'
-import throttle from 'lodash.throttle'
 import type {
   ComputePositionConfig,
   Middleware,
+  OffsetOptions,
+  ShiftOptions,
   VirtualElement,
 } from '@floating-ui/dom'
-import { computePosition, flip, offset, shift } from '@floating-ui/dom'
+import type { EditorState } from '@milkdown/prose/state'
+import type { EditorView } from '@milkdown/prose/view'
+
+import {
+  autoUpdate,
+  computePosition,
+  flip,
+  offset,
+  shift,
+} from '@floating-ui/dom'
 import { posToDOMRect } from '@milkdown/prose'
+import { TextSelection } from '@milkdown/prose/state'
+import { throttle } from 'lodash-es'
 
 /// Options for tooltip provider.
 export interface TooltipProviderOptions {
@@ -19,16 +28,14 @@ export interface TooltipProviderOptions {
   /// The function to determine whether the tooltip should be shown.
   shouldShow?: (view: EditorView, prevState?: EditorState) => boolean
   /// The offset to get the block. Default is 0.
-  offset?:
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
-  /// Other middlewares for floating ui. This will be added after the internal middlewares.
+  offset?: OffsetOptions
+  /// The amount to shift options the block by.
+  shift?: ShiftOptions
+  /// Other middlewares for floating ui. They run after the internal
+  /// middlewares.
   middleware?: Middleware[]
-  /// Options for floating ui. If you pass `middleware` or `placement`, it will override the internal settings.
+  /// Options for floating ui. A `middleware` or `placement` value here
+  /// overrides the internal setting.
   floatingUIOptions?: Partial<ComputePositionConfig>
   /// The root element that the tooltip will be appended to.
   root?: HTMLElement
@@ -55,13 +62,25 @@ export class TooltipProvider {
   #initialized = false
 
   /// @internal
-  readonly #offset?:
-    | number
-    | {
-        mainAxis?: number
-        crossAxis?: number
-        alignmentAxis?: number | null
-      }
+  #cleanupAutoUpdate?: () => void
+
+  /// @internal
+  /// The state that the last evaluated update saw. The update is throttled,
+  /// so a trailing call carries only the `prevState` of the last call. A no-op
+  /// transaction in the window must not hide an earlier real change.
+  #lastState?: EditorState
+
+  /// @internal
+  readonly #offset?: OffsetOptions
+
+  /// @internal
+  readonly #shift?: ShiftOptions
+
+  /// @internal
+  readonly #updater: {
+    (view: EditorView, prevState?: EditorState): void
+    cancel: () => void
+  }
 
   /// The root element of the tooltip.
   element: HTMLElement
@@ -77,10 +96,38 @@ export class TooltipProvider {
     this.#debounce = options.debounce ?? 200
     this.#shouldShow = options.shouldShow ?? this.#_shouldShow
     this.#offset = options.offset
+    this.#shift = options.shift
     this.#middleware = options.middleware ?? []
     this.#floatingUIOptions = options.floatingUIOptions ?? {}
     this.#root = options.root
     this.element.dataset.show = 'false'
+    this.#updater = throttle(this.#onUpdate, this.#debounce)
+  }
+
+  /// @internel
+  #updatePosition = (reference: VirtualElement) => {
+    computePosition(reference, this.element, {
+      placement: this.#floatingUIOptions.placement ?? 'top',
+      middleware: [
+        flip(),
+        offset(this.#offset),
+        shift(this.#shift),
+        ...this.#middleware,
+      ],
+      ...this.#floatingUIOptions,
+    })
+      .then(({ x, y }) => {
+        Object.assign(this.element.style, {
+          left: `${x}px`,
+          top: `${y}px`,
+        })
+      })
+      .catch(console.error)
+  }
+
+  /// @internal
+  #shouldAutoUpdate = (editorView: EditorView) => {
+    return this.#root !== editorView.dom.parentElement
   }
 
   /// @internal
@@ -90,8 +137,9 @@ export class TooltipProvider {
     const { ranges } = selection
     const from = Math.min(...ranges.map((range) => range.$from.pos))
     const to = Math.max(...ranges.map((range) => range.$to.pos))
-    const isSame =
-      prevState && prevState.doc.eq(doc) && prevState.selection.eq(selection)
+    const unchanged = (other?: EditorState) =>
+      !!other && other.doc.eq(doc) && other.selection.eq(selection)
+    const isSame = unchanged(prevState) && unchanged(this.#lastState)
 
     if (!this.#initialized) {
       const root = this.#root ?? view.dom.parentElement ?? document.body
@@ -100,6 +148,10 @@ export class TooltipProvider {
     }
 
     if (composing || isSame) return
+    this.#lastState = state
+
+    this.#cleanupAutoUpdate?.()
+    this.#cleanupAutoUpdate = void 0
 
     if (!this.#shouldShow(view, prevState)) {
       this.hide()
@@ -108,29 +160,27 @@ export class TooltipProvider {
 
     const virtualEl: VirtualElement = {
       getBoundingClientRect: () => posToDOMRect(view, from, to),
+      contextElement: view.dom,
     }
-    computePosition(virtualEl, this.element, {
-      placement: this.#floatingUIOptions.placement ?? 'top',
-      middleware: [flip(), offset(this.#offset), shift(), ...this.#middleware],
-    }).then(({ x, y }) => {
-      Object.assign(this.element.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      })
-    })
+
+    if (this.#shouldAutoUpdate(view)) {
+      this.#cleanupAutoUpdate = autoUpdate(virtualEl, this.element, () =>
+        this.#updatePosition(virtualEl)
+      )
+    } else {
+      this.#updatePosition(virtualEl)
+    }
 
     this.show()
   }
 
   /// Update provider state by editor view.
   update = (view: EditorView, prevState?: EditorState): void => {
-    const updater = throttle(this.#onUpdate, this.#debounce)
-
-    updater(view, prevState)
+    this.#updater(view, prevState)
   }
 
   /// @internal
-  #_shouldShow(view: EditorView): boolean {
+  #_shouldShow = (view: EditorView): boolean => {
     const { doc, selection } = view.state
     const { empty, from, to } = selection
 
@@ -150,23 +200,28 @@ export class TooltipProvider {
   }
 
   /// Destroy the tooltip.
-  destroy = () => {}
+  destroy = () => {
+    this.#cleanupAutoUpdate?.()
+    this.#updater.cancel()
+  }
 
   /// Show the tooltip.
-  show = (virtualElement?: VirtualElement) => {
+  show = (virtualElement?: VirtualElement, editorView?: EditorView) => {
     this.element.dataset.show = 'true'
 
     if (virtualElement) {
-      computePosition(virtualElement, this.element, {
-        placement: 'top',
-        middleware: [flip(), offset(this.#offset)],
-        ...this.#floatingUIOptions,
-      }).then(({ x, y }) => {
-        Object.assign(this.element.style, {
-          left: `${x}px`,
-          top: `${y}px`,
-        })
-      })
+      this.#cleanupAutoUpdate?.()
+      this.#cleanupAutoUpdate = void 0
+
+      const reference = { ...virtualElement, contextElement: editorView?.dom }
+
+      if (editorView && this.#shouldAutoUpdate(editorView)) {
+        this.#cleanupAutoUpdate = autoUpdate(reference, this.element, () =>
+          this.#updatePosition(reference)
+        )
+      } else {
+        this.#updatePosition(reference)
+      }
     }
 
     this.onShow()

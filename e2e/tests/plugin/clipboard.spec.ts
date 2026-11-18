@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+
 import {
   focusEditor,
   paste,
@@ -72,6 +73,7 @@ test('paste inline text only html should extend mark', async ({ page }) => {
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('ArrowLeft')
+  await waitNextFrame(page)
 
   await paste(page, {
     'text/html':

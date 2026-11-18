@@ -1,41 +1,73 @@
-import { TooltipProvider, tooltipFactory } from '@milkdown/kit/plugin/tooltip'
-import type { EditorState, PluginView } from '@milkdown/kit/prose/state'
-import { TextSelection } from '@milkdown/kit/prose/state'
 import type { Ctx } from '@milkdown/kit/ctx'
+import type {
+  EditorState,
+  PluginView,
+  Selection,
+} from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
-import type { AtomicoThis } from 'atomico/types/dom'
-import type { DefineFeature, Icon } from '../shared'
-import { defIfNotExists } from '../../utils'
-import type { ToolbarProps } from './component'
-import { ToolbarElement } from './component'
-import type { html } from 'atomico'
+
+import { TooltipProvider, tooltipFactory } from '@milkdown/kit/plugin/tooltip'
+import { TextSelection } from '@milkdown/kit/prose/state'
+import { createApp, ref, shallowRef, type App, type ShallowRef } from 'vue'
+
+import type { GroupBuilder } from '../../utils'
+import type { DefineFeature } from '../shared'
+import type { ToolbarItem } from './config'
+
+import { crepeFeatureConfig } from '../../core/slice'
+import { CrepeFeature } from '../../feature'
+import { Toolbar } from './component'
+
+export { keymapRef } from '../../utils/keyboard-shortcut'
+export type { KeymapRef } from '../../utils/keyboard-shortcut'
+export type { ToolbarItem } from './config'
 
 interface ToolbarConfig {
-  boldIcon: Icon
-  codeIcon: Icon
-  italicIcon: Icon
-  linkIcon: Icon
-  strikethroughIcon: Icon
-  latexIcon: Icon
-  aiIcon: Icon
-  onAIClick?: (ctx: Ctx) => void
-  extraItems: (getCtx: () => Ctx | undefined) => ReturnType<typeof html> | string
+  boldIcon: string
+  codeIcon: string
+  italicIcon: string
+  linkIcon: string
+  strikethroughIcon: string
+  latexIcon: string
+  aiIcon: string
+  /// Accessible names for the built-in items, for localization. Each
+  /// name defaults to its English label.
+  boldLabel: string
+  codeLabel: string
+  italicLabel: string
+  linkLabel: string
+  strikethroughLabel: string
+  latexLabel: string
+  aiLabel: string
+  buildToolbar: (builder: GroupBuilder<ToolbarItem>) => void
 }
 
 export type ToolbarFeatureConfig = Partial<ToolbarConfig>
 
-const toolbar = tooltipFactory('CREPE_TOOLBAR')
+const toolbarTooltip = tooltipFactory('CREPE_TOOLBAR')
 
 class ToolbarView implements PluginView {
   #tooltipProvider: TooltipProvider
-  #content: AtomicoThis<ToolbarProps>
+  #content: HTMLElement
+  #app: App
+  #selection: ShallowRef<Selection>
+  #show = ref(false)
+
   constructor(ctx: Ctx, view: EditorView, config?: ToolbarFeatureConfig) {
-    const content = new ToolbarElement()
+    const content = document.createElement('div')
+    content.className = 'milkdown-toolbar'
+    this.#selection = shallowRef(view.state.selection)
+    const app = createApp(Toolbar, {
+      ctx,
+      hide: this.hide,
+      config,
+      selection: this.#selection,
+      show: this.#show,
+    })
+    app.mount(content)
     this.#content = content
-    this.#content.ctx = ctx
-    this.#content.hide = this.hide
-    this.#content.config = config
-    this.#content.selection = view.state.selection
+    this.#app = app
+
     this.#tooltipProvider = new TooltipProvider({
       content: this.#content,
       debounce: 20,
@@ -71,21 +103,22 @@ class ToolbarView implements PluginView {
       },
     })
     this.#tooltipProvider.onShow = () => {
-      this.#content.show = true
+      this.#show.value = true
     }
     this.#tooltipProvider.onHide = () => {
-      this.#content.show = false
+      this.#show.value = false
     }
     this.update(view)
   }
 
   update = (view: EditorView, prevState?: EditorState) => {
     this.#tooltipProvider.update(view, prevState)
-    this.#content.selection = view.state.selection
+    this.#selection.value = view.state.selection
   }
 
   destroy = () => {
     this.#tooltipProvider.destroy()
+    this.#app.unmount()
     this.#content.remove()
   }
 
@@ -94,16 +127,16 @@ class ToolbarView implements PluginView {
   }
 }
 
-defIfNotExists('milkdown-toolbar', ToolbarElement)
-export const defineFeature: DefineFeature<ToolbarFeatureConfig> = (
+export const toolbar: DefineFeature<ToolbarFeatureConfig> = (
   editor,
   config
 ) => {
   editor
+    .config(crepeFeatureConfig(CrepeFeature.Toolbar))
     .config((ctx) => {
-      ctx.set(toolbar.key, {
+      ctx.set(toolbarTooltip.key, {
         view: (view) => new ToolbarView(ctx, view, config),
       })
     })
-    .use(toolbar)
+    .use(toolbarTooltip)
 }

@@ -1,6 +1,5 @@
+import { pluginViteConfig } from '@milkdown/dev/vite'
 import vueJsx from '@vitejs/plugin-vue-jsx'
-
-import { pluginViteConfig } from '../../../vite.config.mjs'
 
 export default pluginViteConfig(import.meta.url, {
   plugins: [vueJsx()],

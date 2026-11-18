@@ -1,5 +1,7 @@
-import { createSlice } from '@milkdown/ctx'
 import type { Ctx, MilkdownPlugin } from '@milkdown/ctx'
+import type { Node as ProseNode } from '@milkdown/prose/model'
+import type { Selection, Transaction } from '@milkdown/prose/state'
+
 import {
   EditorViewReady,
   InitReady,
@@ -7,9 +9,9 @@ import {
   prosePluginsCtx,
   serializerCtx,
 } from '@milkdown/core'
-import type { Node as ProseNode } from '@milkdown/prose/model'
+import { createSlice } from '@milkdown/ctx'
 import { Plugin, PluginKey } from '@milkdown/prose/state'
-import debounce from 'lodash.debounce'
+import { debounce } from 'lodash-es'
 
 /// The dictionary of subscribers of each event.
 export interface Subscribers {
@@ -24,6 +26,11 @@ export interface Subscribers {
   blur: ((ctx: Ctx) => void)[]
   focus: ((ctx: Ctx) => void)[]
   destroy: ((ctx: Ctx) => void)[]
+  selectionUpdated: ((
+    ctx: Ctx,
+    selection: Selection,
+    prevSelection: Selection | null
+  ) => void)[]
 }
 
 /// The manager of listeners. It provides methods to subscribe to events.
@@ -33,6 +40,9 @@ export class ListenerManager {
   private updatedListeners: Array<
     (ctx: Ctx, doc: ProseNode, prevDoc: ProseNode) => void
   > = []
+  private selectionUpdatedListeners: Array<
+    (ctx: Ctx, selection: Selection, prevDoc: Selection | null) => void
+  > = []
   private markdownUpdatedListeners: Array<
     (ctx: Ctx, markdown: string, prevMarkdown: string) => void
   > = []
@@ -40,7 +50,8 @@ export class ListenerManager {
   private focusListeners: Array<(ctx: Ctx) => void> = []
   private destroyListeners: Array<(ctx: Ctx) => void> = []
 
-  /// A getter to get all [subscribers](#interface-subscribers). You should not use this method directly.
+  /// A getter for all [subscribers](#interface-subscribers). Do not call
+  /// it directly.
   get listeners(): Subscribers {
     return {
       beforeMount: this.beforeMountedListeners,
@@ -50,6 +61,7 @@ export class ListenerManager {
       blur: this.blurListeners,
       focus: this.focusListeners,
       destroy: this.destroyListeners,
+      selectionUpdated: this.selectionUpdatedListeners,
     }
   }
 
@@ -67,9 +79,9 @@ export class ListenerManager {
     return this
   }
 
-  /// Subscribe to the updated event.
-  /// This event will be triggered after the editor state is updated and **the document is changed**.
-  /// The second parameter is the current document and the third parameter is the previous document.
+  /// Subscribe to the updated event. The event fires after the editor
+  /// state updates and **the document changes**. The second parameter is
+  /// the current document. The third parameter is the previous document.
   updated = (
     fn: (ctx: Ctx, doc: ProseNode, prevDoc: ProseNode | null) => void
   ) => {
@@ -77,9 +89,10 @@ export class ListenerManager {
     return this
   }
 
-  /// Subscribe to the markdownUpdated event.
-  /// This event will be triggered after the editor state is updated and **the document is changed**.
-  /// The second parameter is the current markdown and the third parameter is the previous markdown.
+  /// Subscribe to the markdownUpdated event. The event fires after the
+  /// editor state updates and **the document changes**. The second
+  /// parameter is the current markdown. The third parameter is the
+  /// previous markdown.
   markdownUpdated(
     fn: (ctx: Ctx, markdown: string, prevMarkdown: string) => void
   ) {
@@ -107,10 +120,23 @@ export class ListenerManager {
     this.destroyListeners.push(fn)
     return this
   }
+
+  /// Subscribe to the selectionUpdated event.
+  /// This event will be triggered when the editor selection is updated.
+  selectionUpdated(
+    fn: (
+      ctx: Ctx,
+      selection: Selection,
+      prevSelection: Selection | null
+    ) => void
+  ) {
+    this.selectionUpdatedListeners.push(fn)
+    return this
+  }
 }
 
-/// The ctx key of the listener manager.
-/// You can use `ctx.get(listenerCtx)` to get the [listener manager](#class-listenermanager).
+/// The ctx key of the listener manager. Call `ctx.get(listenerCtx)` to
+/// get the [listener manager](#class-listenermanager).
 export const listenerCtx = createSlice<ListenerManager>(
   new ListenerManager(),
   'listener'
@@ -135,12 +161,37 @@ export const listener: MilkdownPlugin = (ctx) => {
 
     let prevDoc: ProseNode | null = null
     let prevMarkdown: string | null = null
+    let prevSelection: Selection | null = null
+    let latestTr: Transaction | null = null
+
+    const debouncedHandler = debounce(() => {
+      if (!latestTr) return
+      const { doc } = latestTr
+
+      if (listeners.updated.length > 0 && prevDoc && !prevDoc.eq(doc)) {
+        listeners.updated.forEach((fn) => {
+          fn(ctx, doc, prevDoc!)
+        })
+      }
+
+      if (listeners.markdownUpdated.length > 0 && prevDoc && !prevDoc.eq(doc)) {
+        const markdown = serializer(doc)
+        listeners.markdownUpdated.forEach((fn) => {
+          fn(ctx, markdown, prevMarkdown!)
+        })
+        prevMarkdown = markdown
+      }
+
+      prevDoc = doc
+      latestTr = null
+    }, 200)
 
     const plugin = new Plugin({
       key,
       view: () => {
         return {
           destroy: () => {
+            debouncedHandler.cancel()
             listeners.destroy.forEach((fn) => fn(ctx))
           },
         }
@@ -163,32 +214,25 @@ export const listener: MilkdownPlugin = (ctx) => {
           prevMarkdown = serializer(instance.doc)
         },
         apply: (tr) => {
-          if (!tr.docChanged || tr.getMeta('addToHistory') === false) return
+          const currentSelection = tr.selection
+          if (
+            (!prevSelection && currentSelection) ||
+            (prevSelection && !currentSelection.eq(prevSelection))
+          ) {
+            listeners.selectionUpdated.forEach((fn) => {
+              fn(ctx, currentSelection, prevSelection)
+            })
+            prevSelection = currentSelection
+          }
 
-          const handler = debounce(() => {
-            const { doc } = tr
-            if (listeners.updated.length > 0 && prevDoc && !prevDoc.eq(doc)) {
-              listeners.updated.forEach((fn) => {
-                fn(ctx, doc, prevDoc!)
-              })
-            }
+          if (
+            !(tr.docChanged || tr.storedMarksSet) ||
+            tr.getMeta('addToHistory') === false
+          )
+            return
 
-            if (
-              listeners.markdownUpdated.length > 0 &&
-              prevDoc &&
-              !prevDoc.eq(doc)
-            ) {
-              const markdown = serializer(doc)
-              listeners.markdownUpdated.forEach((fn) => {
-                fn(ctx, markdown, prevMarkdown!)
-              })
-              prevMarkdown = markdown
-            }
-
-            prevDoc = doc
-          }, 200)
-
-          return handler()
+          latestTr = tr
+          debouncedHandler()
         },
       },
     })

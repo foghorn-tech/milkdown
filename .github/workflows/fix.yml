@@ -8,19 +8,17 @@ on:
 permissions:
   contents: read
 
-env:
-  CI: true
-  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-
 jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup
 
-      - name: Fix
-        run: pnpm fix
+      - run: pnpm build:tsc
 
-      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - name: Fix
+        run: pnpm codegen && pnpm fix
+
+      - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8

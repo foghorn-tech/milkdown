@@ -1,5 +1,6 @@
-import { $nodeSchema } from '@milkdown/utils'
 import { expectDomTypeError } from '@milkdown/exception'
+import { $nodeSchema } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__/meta'
 
 export const IMAGE_DATA_TYPE = 'image-block'
@@ -15,9 +16,9 @@ export const imageBlockSchema = $nodeSchema('image-block', () => {
     atom: true,
     priority: 100,
     attrs: {
-      src: { default: '' },
-      caption: { default: '' },
-      ratio: { default: 1 },
+      src: { default: '', validate: 'string' },
+      caption: { default: '', validate: 'string' },
+      ratio: { default: 1, validate: 'number' },
     },
     parseDOM: [
       {
@@ -38,7 +39,9 @@ export const imageBlockSchema = $nodeSchema('image-block', () => {
       match: ({ type }) => type === 'image-block',
       runner: (state, node, type) => {
         const src = node.url as string
-        const caption = node.title as string
+        // mdast gives null for a title that the markdown omits, and caption is
+        // a validated string attribute.
+        const caption = (node.title as string | null) ?? ''
         let ratio = Number((node.alt as string) || 1)
         if (Number.isNaN(ratio) || ratio === 0) ratio = 1
 

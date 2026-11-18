@@ -1,7 +1,8 @@
+import vueJsx from '@vitejs/plugin-vue-jsx'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  root: 'src',
+  plugins: [vueJsx()],
   build: {
     outDir: '../lib',
     emptyOutDir: true,

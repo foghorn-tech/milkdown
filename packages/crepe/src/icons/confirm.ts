@@ -1,6 +1,4 @@
-import { html } from 'atomico'
-
-export const confirmIcon = html`
+export const confirmIcon = `
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"

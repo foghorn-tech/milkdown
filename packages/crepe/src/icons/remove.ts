@@ -1,6 +1,4 @@
-import { html } from 'atomico'
-
-export const removeIcon = html`
+export const removeIcon = `
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"

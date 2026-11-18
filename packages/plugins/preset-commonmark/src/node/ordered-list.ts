@@ -9,6 +9,7 @@ import {
   $nodeSchema,
   $useKeymap,
 } from '@milkdown/utils'
+
 import { withMeta } from '../__internal__'
 
 /// HTML attributes for ordered list node.
@@ -26,9 +27,11 @@ export const orderedListSchema = $nodeSchema('ordered_list', (ctx) => ({
   attrs: {
     order: {
       default: 1,
+      validate: 'number',
     },
     spread: {
       default: false,
+      validate: 'boolean',
     },
   },
   parseDOM: [
@@ -38,7 +41,7 @@ export const orderedListSchema = $nodeSchema('ordered_list', (ctx) => ({
         if (!(dom instanceof HTMLElement)) throw expectDomTypeError(dom)
 
         return {
-          spread: dom.dataset.spread,
+          spread: dom.dataset.spread === 'true',
           order: dom.hasAttribute('start')
             ? Number(dom.getAttribute('start'))
             : 1,
@@ -50,7 +53,7 @@ export const orderedListSchema = $nodeSchema('ordered_list', (ctx) => ({
     'ol',
     {
       ...ctx.get(orderedListAttr.key)(node),
-      ...(node.attrs.order === 1 ? {} : node.attrs.order),
+      ...(node.attrs.order === 1 ? {} : { start: node.attrs.order }),
       'data-spread': node.attrs.spread,
     },
     0,
@@ -58,8 +61,11 @@ export const orderedListSchema = $nodeSchema('ordered_list', (ctx) => ({
   parseMarkdown: {
     match: ({ type, ordered }) => type === 'list' && !!ordered,
     runner: (state, node, type) => {
-      const spread = node.spread != null ? `${node.spread}` : 'true'
-      state.openNode(type, { spread }).next(node.children).closeNode()
+      const spread = node.spread ?? true
+      state
+        .openNode(type, { spread, order: node.start ?? 1 })
+        .next(node.children)
+        .closeNode()
     },
   },
   toMarkdown: {
@@ -67,8 +73,8 @@ export const orderedListSchema = $nodeSchema('ordered_list', (ctx) => ({
     runner: (state, node) => {
       state.openNode('list', undefined, {
         ordered: true,
-        start: 1,
-        spread: node.attrs.spread === 'true',
+        start: node.attrs.order ?? 1,
+        spread: node.attrs.spread,
       })
       state.next(node.content)
       state.closeNode()
