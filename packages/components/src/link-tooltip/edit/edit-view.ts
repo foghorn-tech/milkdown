@@ -80,8 +80,8 @@ export class LinkEditTooltip implements PluginView {
   }
 
   #onOutsidePointerDown = (e: PointerEvent) => {
-    const target = e.target as Node | null
-    if (!target) return
+    const target = e.composedPath()[0]
+    if (!(target instanceof Node)) return
     if (this.#content.contains(target)) return
     this.#reset()
   }

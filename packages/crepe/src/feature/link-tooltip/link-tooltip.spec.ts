@@ -117,4 +117,29 @@ describe('link tooltip edit', () => {
 
     expect(getEditTooltip()).toHaveAttribute('data-show', 'true')
   })
+
+  test('keeps the input open for a click inside a shadow root', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const shadow = host.attachShadow({ mode: 'open' })
+    const root = document.createElement('div')
+    shadow.append(root)
+    const crepe = new Crepe({ root, defaultValue: 'hello world' })
+
+    await crepe.create()
+    try {
+      crepe.editor.ctx.get(linkTooltipAPI.key).addLink(1, 6)
+      await waitForAsync()
+      const tooltip = shadow.querySelector('.milkdown-link-edit')
+      expect(tooltip).toHaveAttribute('data-show', 'true')
+      tooltip!
+        .querySelector('input')!
+        .dispatchEvent(
+          new PointerEvent('pointerdown', { bubbles: true, composed: true })
+        )
+      expect(tooltip).toHaveAttribute('data-show', 'true')
+    } finally {
+      await crepe.destroy()
+    }
+  })
 })
